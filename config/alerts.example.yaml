@@ -1,0 +1,59 @@
+# Market Monitor - regole di alert, antispam, riepilogo e salute del servizio.
+# Copia in config/alerts.yaml (non committare l'originale).
+# Catalogo e logica: docs/ALERTS.md. Modifiche lette al ciclo successivo.
+
+# Default per classe di asset. Un asset puo' sovrascrivere i singoli campi
+# con la sezione `overrides` in watchlist.yaml.
+defaults:
+  stock:
+    fast_move: {enabled: true, window_minutes: 60, threshold_pct: 2.0, step_pct: 1.0}
+    day_move:  {enabled: true, steps_pct: [3, 5, 8]}
+    open_gap:  {enabled: true, threshold_pct: 2.0, max_delay_minutes: 45}
+  etf:
+    fast_move: {enabled: true, window_minutes: 60, threshold_pct: 1.2, step_pct: 0.6}
+    day_move:  {enabled: true, steps_pct: [2, 4, 6]}
+    open_gap:  {enabled: true, threshold_pct: 1.0, max_delay_minutes: 45}
+  crypto:
+    fast_move: {enabled: true, window_minutes: 60, threshold_pct: 3.0, step_pct: 1.5}
+    # Per le crypto il riferimento e' la variazione sulle ultime 24 ore.
+    day_move:  {enabled: true, steps_pct: [5, 8, 12], reference: rolling_24h}
+    open_gap:  {enabled: false}
+
+# Livelli di prezzo personali (watchlist.yaml, campo `levels`).
+levels:
+  enabled: true
+  # Il livello si riarma solo quando il prezzo si allontana di questa percentuale.
+  hysteresis_pct: 0.5
+
+# Antispam e consegna.
+delivery:
+  cooldown_minutes: 120
+  max_alerts_per_message: 10
+  max_messages_per_hour: 6
+  quiet_hours:
+    enabled: true
+    start: "23:00"
+    end: "07:00"
+    timezone: Europe/Rome
+    # Gli alert day_move oltre la soglia "urgente" passano comunque.
+    urgent_bypass: true
+  urgent_pct:
+    stock: 8
+    etf: 6
+    crypto: 10
+
+# Riepilogo giornaliero. Serve anche da heartbeat: se non arriva, il servizio e' fermo.
+digest:
+  enabled: true
+  time: "18:00"
+  timezone: Europe/Rome
+  weekend_crypto_only: true
+  top_movers: 3
+
+# Salute del servizio.
+health:
+  # Cicli consecutivi falliti di un provider prima di avvisare (un solo messaggio).
+  error_alert_after_failures: 3
+  # Dato piu' vecchio di cosi' = mercato chiuso o dato inaffidabile: nessun alert per quell'asset.
+  # 45 minuti tollera il ritardo di circa 15 minuti dei dati gratuiti.
+  stale_data_minutes: 45

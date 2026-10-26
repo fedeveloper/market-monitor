@@ -1,0 +1,64 @@
+# Market Monitor - configurazione generale.
+# Copia in config/config.yaml (non committare l'originale).
+# I segreti (token Telegram) stanno in .env, mai qui.
+
+# Intervallo tra due controlli. Cambialo qui per monitorare piu' o meno spesso.
+interval_minutes: 15
+# Se true il ciclo parte agli orari "tondi" (:00, :15, :30, :45 con intervallo 15).
+align_to_clock: true
+
+# Fuso orario per messaggi, digest e quiet hours.
+timezone: Europe/Rome
+
+markets:
+  IT:
+    timezone: Europe/Rome
+    open: "09:00"
+    close: "17:30"
+    days: [mon, tue, wed, thu, fri]
+  US:
+    timezone: America/New_York
+    open: "09:30"
+    close: "16:00"
+    days: [mon, tue, wed, thu, fri]
+  CRYPTO:
+    always_open: true
+
+providers:
+  yahoo:
+    # Endpoint non ufficiale: puo' cambiare. Da verificare in M1.
+    base_url: https://query1.finance.yahoo.com
+    timeout_seconds: 10
+    retries: 2
+    request_delay_ms: 300
+    user_agent: "Mozilla/5.0 (compatible; market-monitor/0.1)"
+  binance:
+    base_url: https://api.binance.com
+    timeout_seconds: 10
+    retries: 2
+    request_delay_ms: 100
+
+telegram:
+  # TELEGRAM_BOT_TOKEN e TELEGRAM_CHAT_ID vengono letti da .env
+  parse_mode: HTML
+  # Sotto il limite di 4096 caratteri di Telegram, con margine per l'escape.
+  max_message_chars: 4000
+  timeout_seconds: 10
+  retries: 2
+
+storage:
+  path: data/market.db
+  # Giorni di campioni da conservare.
+  retention_days: 30
+
+logging:
+  level: INFO
+  file: logs/market-monitor.log
+  max_bytes: 1000000
+  backup_count: 3
+
+# Evolutiva M9 (NON implementata in v1): file di stato leggibile da picoclaw.
+# status_file:
+#   enabled: false
+#   path: data/status.json    # puo' stare su tmpfs, es. /dev/shm/market-monitor-status.json
+#   recent_alerts: 20

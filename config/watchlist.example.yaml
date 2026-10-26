@@ -1,0 +1,54 @@
+# Market Monitor - asset monitorati.
+# Copia in config/watchlist.yaml (non committare l'originale).
+# Modifiche lette al ciclo successivo, senza riavvio.
+#
+# Campi:
+#   symbol    simbolo per il provider (Yahoo: suffisso .MI per Borsa Italiana; Binance: es. BTCEUR)
+#   name      nome mostrato nei messaggi
+#   class     stock | etf | crypto  (sceglie i default in alerts.yaml)
+#   market    IT | US | CRYPTO      (vedi config.yaml)
+#   provider  yahoo | binance
+#   levels    livelli di prezzo personali (above / below), opzionale
+#   overrides soglie diverse dai default per questo asset, opzionale (stessa struttura di alerts.yaml)
+#   enabled   false per sospendere un asset senza cancellarlo
+#
+# I simboli sono indicativi: verificali con `python -m market_monitor check-symbols`.
+
+assets:
+  # --- Azioni italiane ---
+  - {symbol: ENI.MI,   name: Eni,                 class: stock, market: IT, provider: yahoo}
+  - {symbol: ENEL.MI,  name: Enel,                class: stock, market: IT, provider: yahoo}
+  - {symbol: ISP.MI,   name: Intesa Sanpaolo,     class: stock, market: IT, provider: yahoo}
+  - {symbol: UCG.MI,   name: UniCredit,           class: stock, market: IT, provider: yahoo}
+  - {symbol: G.MI,     name: Generali,            class: stock, market: IT, provider: yahoo}
+  - {symbol: RACE.MI,  name: Ferrari,             class: stock, market: IT, provider: yahoo}
+  - {symbol: LDO.MI,   name: Leonardo,            class: stock, market: IT, provider: yahoo}
+  - {symbol: STLAM.MI, name: Stellantis,          class: stock, market: IT, provider: yahoo}
+
+  # --- ETF quotati a Borsa Italiana ---
+  - {symbol: SWDA.MI,  name: iShares Core MSCI World,  class: etf, market: IT, provider: yahoo}
+  - {symbol: VWCE.MI,  name: Vanguard FTSE All-World,  class: etf, market: IT, provider: yahoo}
+  - {symbol: CSSPX.MI, name: iShares Core S&P 500,     class: etf, market: IT, provider: yahoo}
+  - {symbol: EIMI.MI,  name: iShares Core MSCI EM IMI, class: etf, market: IT, provider: yahoo}
+
+  # --- Crypto ---
+  - symbol: BTCEUR
+    name: Bitcoin
+    class: crypto
+    market: CRYPTO
+    provider: binance
+    # levels:
+    #   above: [70000]
+    #   below: [50000]
+
+  # Esempio con livelli e override (commentato):
+  # - symbol: ENI.MI
+  #   name: Eni
+  #   class: stock
+  #   market: IT
+  #   provider: yahoo
+  #   levels:
+  #     above: [16.00]
+  #     below: [13.50]
+  #   overrides:
+  #     fast_move: {threshold_pct: 1.5}
