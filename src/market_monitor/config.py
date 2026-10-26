@@ -977,3 +977,70 @@ def check_secrets(secrets: Secrets) -> tuple[list[str], list[str]]:
         errors.append(".env: TELEGRAM_CHAT_ID in formato non valido (atteso un numero intero)")
     return errors, warnings
 
+
+
+# ---------------------------------------------------------------------------
+# Hot reload
+# ---------------------------------------------------------------------------
+
+_Signature = tuple[tuple[int, int] | None, ...]
+
+
+class ConfigManager:
+    """Keeps the current Config and reloads it when one of the YAML files changes.
+
+    Changes are detected from (mtime_ns, size). If the new files are invalid the
+    previous config stays active and the errors are logged once per change.
+    .env is not reloaded: secrets need a restart.
+    """
+
+    def __init__(self, config_dir: Path, base_dir: Path | None = None):
+        self.config_dir = Path(config_dir)
+        self.base_dir = base_dir
+        self._config: Config | None = None
+        self._signature: _Signature | None = None
+
+    @property
+    def config(self) -> Config:
+        if self._config is None:
+            raise RuntimeError("configuration not loaded yet: call load() first")
+        return self._config
+
+    def _current_signature(self) -> _Signature:
+        signature = []
+        for name in CONFIG_FILES:
+            try:
+                st = (self.config_dir / name).stat()
+                signature.append((st.st_mtime_ns, st.st_size))
+            except FileNotFoundError:
+                signature.append(None)
+        return tuple(signature)
+
+    def load(self) -> Config:
+        """Initial load. Raises ConfigError if the files are invalid."""
+        signature = self._current_signature()
+        self._config = load_config(self.config_dir, self.base_dir)
+        self._signature = signature
+        return self._config
+
+    def reload_if_changed(self) -> bool:
+        """Reload if any file changed since the last attempt. Returns True if a new
+        config was applied, False if nothing changed or the new files are invalid."""
+        signature = self._current_signature()
+        if signature == self._signature:
+            return False
+        # Remember the attempt even if it fails, so broken files are reported once.
+        self._signature = signature
+        try:
+            config = load_config(self.config_dir, self.base_dir)
+        except ConfigError as exc:
+            log.error(
+                "configuration changed but is invalid, keeping the previous one:\n  %s",
+                "\n  ".join(exc.errors),
+            )
+            return False
+        self._config = config
+        log.info("configuration reloaded: %d assets enabled", len(config.enabled_assets))
+        for warning in config.warnings:
+            log.warning("%s", warning)
+        return True
