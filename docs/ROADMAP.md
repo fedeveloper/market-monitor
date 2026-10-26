@@ -6,7 +6,7 @@ Regola generale: `pytest` verde (offline) prima di ogni commit; sviluppo e test 
 
 La v1 (senza agente AI) comprende le milestone M0-M8. Le evolutive (M9 in poi) partono solo quando la v1 gira stabile sul Raspberry e l'utente lo conferma.
 
-## M0 — Scheletro del progetto `[ ]`
+## M0 — Scheletro del progetto `[x]`
 
 - `pyproject.toml` minimo, pacchetto `src/market_monitor/`, `__main__.py`, `requirements.txt` e `requirements-dev.txt` già presenti.
 - Logging con rotazione file + stdout, mascheramento del token.
@@ -14,6 +14,7 @@ La v1 (senza agente AI) comprende le milestone M0-M8. Le evolutive (M9 in poi) p
 - Ricarica a caldo dei file modificati (controllo `mtime`).
 - CLI: `check-config`.
 - Test: config valida, config non valida con messaggi chiari, override per asset.
+- Note: errori di validazione raccolti tutti insieme con file e percorso della chiave; chiavi sconosciute trattate come errore (refusi); le variabili d'ambiente prevalgono su `.env`; `.env` non viene ricaricato a caldo (serve un riavvio); se la config modificata non è valida resta attiva la precedente; percorsi relativi risolti rispetto alla radice del progetto.
 
 ## M1 — Provider di dati `[ ]`
 

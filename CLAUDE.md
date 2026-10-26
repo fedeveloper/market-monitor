@@ -68,6 +68,7 @@ python -m market_monitor status --print      # solo M9 (dopo la v1): stampa il f
 - Procedi per milestone (`docs/ROADMAP.md`), una alla volta, con commit piccoli. A fine milestone aggiorna lo stato nella roadmap.
 - La v1 è M0-M8. Non iniziare M9 (integrazione con picoclaw tramite file di stato) né altre evolutive finché la v1 non gira stabile sul Pi e l'utente non lo conferma.
 - Le decisioni in `docs/ARCHITECTURE.md` sono state prese con l'utente: se ritieni vada cambiata una, proponilo e chiedi prima di procedere.
+- A ogni PR (nella descrizione e nel riepilogo all'utente) includi due sezioni in italiano: come installare o aggiornare l'applicazione sul Raspberry (comandi pronti da copiare, eventuali nuovi file di config o chiavi da aggiungere, riavvio del servizio) e cosa testare sul Pi in quel rilascio (comandi da lanciare e risultato atteso).
 - Le parti marcate "da verificare" nei docs (formato delle risposte dei provider, orari, latenza dei dati) vanno controllate con una chiamata reale e poi aggiornate nei docs.
 
 ## Sicurezza

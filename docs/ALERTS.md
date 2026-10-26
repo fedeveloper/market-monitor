@@ -23,8 +23,10 @@ Il servizio riporta dati e soglie superate. Non produce raccomandazioni.
 ### `day_move`
 
 - Riferimento: chiusura precedente per azioni ed ETF; per le crypto la variazione sulle ultime 24 ore (`reference: rolling_24h`).
-- Un alert per ogni gradino superato, per direzione, una sola volta per sessione (per le crypto: per giorno solare nel fuso configurato). Esempio con gradini 3/5/8: un titolo a +3,2% genera un alert; il successivo arriva solo a +5%, poi a +8%.
-- Se il prezzo rientra sotto il gradino con isteresi, il gradino si riarma ma il cooldown continua a valere.
+- Un alert per ogni gradino superato, per direzione. Esempio con gradini 3/5/8: un titolo a +3,2% genera un alert; il successivo arriva solo a +5%, poi a +8%.
+- Riarmo (decisione presa con l'utente): un gradino già notificato si riarma quando la variazione rientra di almeno `rearm_pct` punti percentuali sotto il gradino (es. gradino 3% con `rearm_pct: 1.0`: si riarma sotto +2%). Se poi la variazione torna oltre il gradino, l'alert riparte, ma solo dopo il cooldown (120 minuti di default) dall'ultimo alert per la stessa regola. Default proposti per `rearm_pct`: stock 1,0 · etf 0,6 · crypto 1,5, sovrascrivibili per asset. Il parametro va aggiunto a `alerts.example.yaml` e alla validazione in M5.
+- Azioni ed ETF: lo stato dei gradini si azzera a ogni nuova sessione (cambia la chiusura precedente di riferimento).
+- Crypto (decisione presa con l'utente): riferimento sulle 24 ore mobili e **nessun azzeramento a mezzanotte**. Un gradino torna a scattare solo dopo il riarmo descritto sopra, così lo stesso movimento non viene notificato due volte a cavallo della mezzanotte.
 - All'avvio o dopo un riavvio a metà sessione, i gradini già superati si inizializzano in silenzio (nessun alert retroattivo); il riepilogo giornaliero mostra comunque la situazione.
 
 ### `open_gap`

@@ -1,0 +1,18 @@
+# Secrets and local configuration (only *.example.* files are committed)
+.env
+config/config.yaml
+config/watchlist.yaml
+config/alerts.yaml
+
+# Runtime data
+data/
+logs/
+
+# Python
+.venv/
+__pycache__/
+*.py[cod]
+*.egg-info/
+.pytest_cache/
+build/
+dist/
