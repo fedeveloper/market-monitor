@@ -102,3 +102,38 @@ def test_check_symbols_reports_ok_and_errors(config_dir, capsys):
     assert "ERRORE ENEL.MI" in out and "symbol may be delisted" in out
     assert "OK     BTCEUR" in out
     assert "Simboli verificati: 3, falliti: 1" in out
+
+
+def test_test_telegram_sends(config_dir, capsys):
+    from conftest import FakeResponse, FakeSession
+    from market_monitor.cli import build_parser, cmd_test_telegram
+
+    env = config_dir.path.parent / ".env"
+    env.write_text(f"TELEGRAM_BOT_TOKEN={FAKE_TOKEN}\nTELEGRAM_CHAT_ID=42\n", encoding="utf-8")
+    args = build_parser().parse_args(["--config-dir", str(config_dir.path), "--env-file", str(env), "test-telegram"])
+    session = FakeSession(FakeResponse(200, {"ok": True}))
+    assert cmd_test_telegram(args, session=session) == 0
+    payload = session.calls[0][2]["json"]
+    assert payload["chat_id"] == "42" and "messaggio di prova" in payload["text"]
+    assert FAKE_TOKEN not in capsys.readouterr().out
+
+
+def test_test_telegram_without_secrets(config_dir, capsys):
+    assert main(["--config-dir", str(config_dir.path), "--env-file", str(config_dir.path / "none"), "test-telegram"]) == 1
+    assert "TELEGRAM_BOT_TOKEN mancante" in capsys.readouterr().out
+
+
+def test_test_telegram_failure(config_dir, capsys):
+    from conftest import FakeResponse, FakeSession
+    from market_monitor.cli import build_parser, cmd_test_telegram
+
+    env = config_dir.path.parent / ".env"
+    env.write_text(f"TELEGRAM_BOT_TOKEN={FAKE_TOKEN}\nTELEGRAM_CHAT_ID=42\n", encoding="utf-8")
+    args = build_parser().parse_args(["--config-dir", str(config_dir.path), "--env-file", str(env), "test-telegram"])
+    session = FakeSession(FakeResponse(401, {"ok": False, "description": "Unauthorized"}))
+    from market_monitor.logging_setup import PLAIN_FORMAT, setup_logging
+
+    setup_logging(fmt=PLAIN_FORMAT)
+    assert cmd_test_telegram(args, session=session) == 1
+    out = capsys.readouterr().out
+    assert "Unauthorized" in out and FAKE_TOKEN not in out
