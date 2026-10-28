@@ -1,5 +1,3 @@
-import sqlite3
-
 import pytest
 
 from market_monitor.models import Quote
