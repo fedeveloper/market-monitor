@@ -86,11 +86,12 @@ Dati con ritardo fino a 15 minuti.
 - Contenuto: per ogni asset prezzo e variazione del giorno, i 3 maggiori rialzi e ribassi, eventuali livelli personali raggiunti, stato del servizio.
 - Nel weekend include solo le crypto (`weekend_crypto_only: true`).
 - Funziona anche da heartbeat: se non arriva, il servizio è fermo.
-- Invio manuale: `python -m market_monitor digest --now`.
+- Invio manuale: `python -m market_monitor digest --now` (`--dry-run` per vederlo senza inviarlo). Non sostituisce quello delle 18:00.
+- Se alle 18:00 il servizio era fermo, il riepilogo parte al primo ciclo entro le 22:00; più tardi si salta.
 
 ## Salute del servizio
 
-- Dopo `error_alert_after_failures` cicli consecutivi falliti di un provider: un solo messaggio di errore; un solo messaggio quando torna a funzionare.
+- Dopo `error_alert_after_failures` cicli consecutivi falliti di un provider: un solo messaggio di errore; un solo messaggio quando torna a funzionare. Un ciclo conta come fallito se tutte le letture di quel provider falliscono; i cicli a mercato chiuso non contano. In quiet hours i messaggi di salute aspettano la fine della fascia.
 - Dato più vecchio di `stale_data_minutes` (default 45): il mercato di quell'asset è considerato chiuso o il dato inaffidabile, e nessun alert viene generato per lui in quel ciclo.
 - Un asset che fallisce non blocca gli altri.
 

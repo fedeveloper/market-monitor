@@ -58,10 +58,11 @@ La v1 (senza agente AI) comprende le milestone M0-M8. Le evolutive (M9 in poi) p
 - Gli alert soppressi non aggiornano lo stato.
 - Note: il cooldown è nel motore (M5). Oltre `max_alerts_per_message` partono gli alert più importanti (urgenti, poi `day_move`, poi per variazione); gli altri sono indicati come "+N altri alert, al prossimo ciclo" e, non avendo aggiornato lo stato, arrivano al ciclo dopo. Il limite orario vale anche per gli urgenti; le quiet hours no (se `urgent_bypass`).
 
-## M7 — Riepilogo e salute `[ ]`
+## M7 — Riepilogo e salute `[x]`
 
 - Digest giornaliero e comando `digest --now`; variante weekend solo crypto.
 - Contatori di fallimenti per provider, messaggi di errore e recupero, nessuna ripetizione.
+- Note: un ciclo di un provider è fallito se tutte le sue letture falliscono (i mercati chiusi non contano). I messaggi di salute rispettano le quiet hours e partono alla fine della fascia se la situazione è la stessa. Un digest non inviato all'ora prevista (servizio fermo) parte entro 4 ore, poi si salta. `digest --now` non segna come inviato il digest del giorno; con `--dry-run` lo mostra senza inviarlo.
 
 ## M8 — Deploy e collaudo sul Raspberry `[ ]`
 
