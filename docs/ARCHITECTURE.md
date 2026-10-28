@@ -83,18 +83,27 @@ Stima volume: 20 asset x 96 campioni/giorno x 30 giorni circa 58.000 righe, poch
 - Le festività non sono in un calendario: se l'ultimo dato del provider è più vecchio di `health.stale_data_minutes` (default 45 in `alerts.yaml`, per tollerare il ritardo di circa 15 minuti dei dati gratuiti), il mercato è trattato come chiuso e quell'asset non genera alert nel ciclo.
 - Le finestre di confronto (`fast_move`) non attraversano mai la notte o il weekend per azioni ed ETF: si usano solo campioni della stessa sessione.
 
-## Provider: dettagli da verificare con una chiamata reale (milestone M1)
+## Provider: formato delle risposte (verifica M1)
+
+Esito della verifica fatta in M1 (28/10/2026) dall'ambiente di sviluppo cloud:
+
+- **Binance** risponde HTTP 451 (blocco geografico) da `api.binance.com` per gli IP del cloud; dal Raspberry in Italia è atteso funzionante. Il mirror pubblico ufficiale `https://data-api.binance.vision` (solo dati di mercato, stesso formato) ha risposto e le sue risposte reali sono in `tests/fixtures/`. Se `api.binance.com` dovesse dare 451 anche dal Pi, basta cambiare `providers.binance.base_url`.
+- **Yahoo** risponde HTTP 429 agli IP del cloud anche alla prima richiesta: il formato non è stato verificato con una chiamata reale e la fixture è sintetica. **Da verificare sul Pi** con `check-symbols` (vedi `docs/DEPLOY.md`).
 
 Yahoo `chart` (non ufficiale):
 - `GET https://query1.finance.yahoo.com/v8/finance/chart/{symbol}?interval=15m&range=1d`
-- Atteso: `chart.result[0].meta` con `regularMarketPrice`, `chartPreviousClose`/`previousClose`, `regularMarketTime`, `currency`, `exchangeTimezoneName`; `timestamp[]` e `indicators.quote[0].{open,close,volume}` con possibili valori `null`.
-- Da misurare: ritardo effettivo dei dati per Borsa Italiana e USA, comportamento con troppe richieste (429), necessità di `User-Agent`.
+- Campi usati: `chart.result[0].meta.regularMarketPrice` e `regularMarketTime` (prezzo e orario del dato), `previousClose` o in mancanza `chartPreviousClose` (riferimento del giorno), `regularMarketVolume`, `currency`; il primo `indicators.quote[0].open` non `null` è l'apertura del giorno. Se manca `regularMarketPrice` si usa l'ultima candela con `close` non `null`.
+- Simbolo sconosciuto: HTTP 404 con `chart.error.description` (atteso "No data found, symbol may be delisted").
+- Da misurare sul Pi: ritardo effettivo dei dati per Borsa Italiana e USA (`check-symbols` mostra "dato delle HH:MM (N min fa)"), comportamento con 429, validità dei simboli di esempio.
 
-Binance (pubblica, senza chiave):
-- `GET https://api.binance.com/api/v3/ticker/24hr?symbol=BTCEUR` (prezzo, variazione 24h)
-- `GET https://api.binance.com/api/v3/klines?symbol=BTCEUR&interval=15m&limit=100` (candele)
+Binance (pubblica, senza chiave), verificato:
+- `GET {base_url}/api/v3/ticker/24hr?symbol=BTCEUR`. Campi usati: `lastPrice` (prezzo), `openPrice` (prezzo di 24 ore fa: riferimento di `day_move` con `rolling_24h`), `volume`, `closeTime` in millisecondi (orario del dato). Valori numerici come stringhe.
+- Simbolo sconosciuto: HTTP 400 con `{"code": -1121, "msg": "Invalid symbol."}`.
+- Le candele (`/api/v3/klines`) non servono: lo storico per `fast_move` è costruito dai campioni salvati a ogni ciclo.
 
-CoinGecko (alternativa, limiti più stretti):
+Gestione comune (`HttpClient`): timeout, retry con backoff esponenziale (1 s, 2 s, ...) su errori di rete, HTTP 5xx e 429 (rispettando `Retry-After`, al massimo 30 s), nessun retry sugli altri 4xx, `User-Agent` da config, pausa minima tra due richieste (`request_delay_ms`).
+
+CoinGecko (alternativa, non implementata):
 - `GET https://api.coingecko.com/api/v3/simple/price?ids=bitcoin&vs_currencies=eur&include_24hr_change=true`
 
 Fallback possibili per azioni/ETF se Yahoo smette di funzionare: Stooq (CSV, spesso solo giornaliero), Twelve Data (piano gratuito con limiti giornalieri). Da valutare solo se serve.

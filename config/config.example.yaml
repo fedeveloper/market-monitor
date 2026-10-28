@@ -33,6 +33,7 @@ providers:
     request_delay_ms: 300
     user_agent: "Mozilla/5.0 (compatible; market-monitor/0.1)"
   binance:
+    # Se api.binance.com risponde 451 (blocco geografico) usa https://data-api.binance.vision
     base_url: https://api.binance.com
     timeout_seconds: 10
     retries: 2

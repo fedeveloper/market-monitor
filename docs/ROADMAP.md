@@ -16,13 +16,14 @@ La v1 (senza agente AI) comprende le milestone M0-M8. Le evolutive (M9 in poi) p
 - Test: config valida, config non valida con messaggi chiari, override per asset.
 - Note: errori di validazione raccolti tutti insieme con file e percorso della chiave; chiavi sconosciute trattate come errore (refusi); le variabili d'ambiente prevalgono su `.env`; `.env` non viene ricaricato a caldo (serve un riavvio); se la config modificata non è valida resta attiva la precedente; percorsi relativi risolti rispetto alla radice del progetto.
 
-## M1 — Provider di dati `[ ]`
+## M1 — Provider di dati `[x]`
 
 - Interfaccia `QuoteProvider` e dataclass `Quote`.
 - `YahooChartProvider` (azioni ed ETF) e `BinanceProvider` (crypto), con timeout, retry, backoff, gestione 429, `User-Agent`, pausa tra richieste.
 - CLI: `check-symbols`.
 - Verifica con chiamate reali e aggiornamento di `docs/ARCHITECTURE.md`: formato reale delle risposte, ritardo effettivo dei dati su Borsa Italiana e USA, validità dei simboli di esempio della watchlist.
 - Fixture JSON salvate in `tests/fixtures/` (da risposte reali, ripulite). Test di parsing, dati `null`, errori HTTP.
+- Note: Binance verificato con risposte reali (mirror `data-api.binance.vision`); Yahoo rispondeva 429 dal cloud, fixture sintetica. **Da completare sul Pi**: formato reale Yahoo, ritardo dei dati, validità dei simboli (vedi `docs/DEPLOY.md`).
 
 ## M2 — Storage `[ ]`
 
