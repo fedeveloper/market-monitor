@@ -52,10 +52,11 @@ La v1 (senza agente AI) comprende le milestone M0-M8. Le evolutive (M9 in poi) p
 - Tutti i casi elencati in `docs/ALERTS.md`.
 - Note: il cooldown è implementato già qui, nel motore, perché fa parte della logica dei gradini e di `fast_move`; aggiunto `day_move.rearm_pct` (riarmo deciso con l'utente).
 
-## M6 — Filtri di consegna `[ ]`
+## M6 — Filtri di consegna `[x]`
 
 - Cooldown, quiet hours con urgenti, limite orario, batch per ciclo con "+N altri".
 - Gli alert soppressi non aggiornano lo stato.
+- Note: il cooldown è nel motore (M5). Oltre `max_alerts_per_message` partono gli alert più importanti (urgenti, poi `day_move`, poi per variazione); gli altri sono indicati come "+N altri alert, al prossimo ciclo" e, non avendo aggiornato lo stato, arrivano al ciclo dopo. Il limite orario vale anche per gli urgenti; le quiet hours no (se `urgent_bypass`).
 
 ## M7 — Riepilogo e salute `[ ]`
 

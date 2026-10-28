@@ -13,6 +13,7 @@ from market_monitor import markets
 from market_monitor.config import Asset, Config, ConfigManager
 from market_monitor.logging_setup import setup_logging
 from market_monitor.alerts import AssetInput, Candidate, EngineSettings, evaluate
+from market_monitor.delivery import plan_delivery
 from market_monitor.messages import alert_fragment, alert_message
 from market_monitor.models import Quote
 from market_monitor.notifier import Notifier
@@ -198,14 +199,25 @@ class Service:
         if not candidates:
             return
         config = self.config
+        now = int(cycle.now_ts)
+        plan = plan_delivery(
+            candidates, cycle.now_ts, config.alerts.delivery, self.storage.sent_message_times(now - 3600)
+        )
+        if plan.quiet:
+            log.info("%d alerts held by quiet hours", len(plan.quiet))
+        if plan.rate_limited:
+            log.warning("%d alerts held by the hourly message limit", len(plan.rate_limited))
+        if not plan.send:
+            return
         assets = {a.symbol: a for a in config.assets}
         text = alert_message(
-            "Market Monitor", assets, [c.alert for c in candidates], cycle.now_ts, config.app.timezone
+            "Market Monitor", assets, [c.alert for c in plan.send], cycle.now_ts, config.app.timezone,
+            more=len(plan.overflow),
         )
         if not self.send(cycle, text):
-            log.warning("%d alerts not delivered: they will be evaluated again next cycle", len(candidates))
+            log.warning("%d alerts not delivered: they will be evaluated again next cycle", len(plan.send))
             return
-        self.mark_delivered(cycle, candidates)
+        self.mark_delivered(cycle, plan.send)
 
     def mark_delivered(self, cycle: CycleResult, candidates: list[Candidate]) -> None:
         """Store the states of delivered alerts (suppressed ones never get here)."""

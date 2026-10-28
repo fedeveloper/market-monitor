@@ -218,3 +218,31 @@ def test_cli_run_without_secrets_fails(small_watchlist, capsys, monkeypatch):
     code = main(["--config-dir", str(small_watchlist.path), "--env-file", "/nonexistent", "run", "--once"])
     assert code == 1
     assert "TELEGRAM_BOT_TOKEN mancante" in capsys.readouterr().out
+
+
+def test_quiet_hours_hold_alert_until_morning(small_watchlist):
+    night = at(2026, 10, 29, 2, 0)
+    quotes = {"BTCEUR": quote("BTCEUR", night, 100.0, 100.0)}
+    notifier = DryRunNotifier()
+    service, providers = make_service(small_watchlist, Clock(night), quotes, notifier)
+    service.run_cycle()  # baseline, crypto only at night
+    providers["binance"].quotes["BTCEUR"] = lambda asset: quote("BTCEUR", int(service.clock()), 94.5, 100.0)
+    service.clock.advance(900)
+    service.run_cycle()
+    assert notifier.sent == []  # -5.5%: not urgent, held
+    assert "day_move:down:5" not in service.storage.rule_states("BTCEUR")
+    service.clock.ts = at(2026, 10, 29, 7, 0)
+    service.run_cycle()
+    assert len(notifier.sent) == 1 and "gradino 5%" in notifier.sent[0]
+
+
+def test_urgent_alert_passes_quiet_hours(small_watchlist):
+    night = at(2026, 10, 29, 2, 0)
+    quotes = {"BTCEUR": quote("BTCEUR", night, 100.0, 100.0)}
+    notifier = DryRunNotifier()
+    service, providers = make_service(small_watchlist, Clock(night), quotes, notifier)
+    service.run_cycle()
+    providers["binance"].quotes["BTCEUR"] = lambda asset: quote("BTCEUR", int(service.clock()), 89.0, 100.0)
+    service.clock.advance(900)
+    service.run_cycle()
+    assert len(notifier.sent) == 1 and "‼️" in notifier.sent[0]
