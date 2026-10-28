@@ -21,6 +21,7 @@ from market_monitor.models import Quote
 from market_monitor.notifier import Notifier
 from market_monitor.providers import ProviderError, QuoteProvider, build_providers
 from market_monitor.scheduler import next_run
+from market_monitor.status import StatusData, build_status, write_atomic
 from market_monitor.storage import SentAlert, Storage
 
 log = logging.getLogger(__name__)
@@ -149,6 +150,7 @@ class Service:
             self.storage.rollback()  # a dry run never changes the database
         else:
             self.storage.commit()
+            self.write_status(now_ts)
 
         skipped = sum(r.skipped for r in cycle.results)
         rss = current_rss_mb()
@@ -285,11 +287,46 @@ class Service:
             return
         if self.send(cycle, self.digest_text(cycle.now_ts)):
             self.storage.set("last_digest", day)
+            self.storage.set("last_digest_at", str(int(cycle.now_ts)))
             log.info("daily digest sent")
 
     def send_digest_now(self) -> bool:
         """``digest --now``: does not mark the scheduled digest as sent."""
         return self.notifier.send(self.digest_text(self.clock()))
+
+    # --- status file (M9) --------------------------------------------------------
+
+    def status_content(self, now_ts: float) -> dict:
+        config = self.config
+        tz = config.app.timezone
+        midnight = datetime.combine(datetime.fromtimestamp(now_ts, tz).date(), datetime.min.time(), tz)
+        last_digest = self.storage.get("last_digest_at")
+        data = StatusData(
+            now_ts=now_ts,
+            interval_minutes=config.app.interval_minutes,
+            tz=tz,
+            rows=[
+                (a, self.storage.last_quote(a.symbol), markets.is_open(config.app.markets[a.market], now_ts))
+                for a in config.enabled_assets
+            ],
+            recent_alerts=self.storage.recent_sent_alerts(config.app.status_file.recent_alerts),
+            levels_today=[
+                a for a in self.storage.sent_alerts(int(midnight.timestamp())) if a.rule.startswith("level_")
+            ],
+            health=self.storage.all_provider_health(),
+            last_digest_ts=int(last_digest) if last_digest else None,
+        )
+        return build_status(data)
+
+    def write_status(self, now_ts: float) -> None:
+        status = self.config.app.status_file
+        if not status.enabled:
+            return
+        try:
+            write_atomic(status.path, self.status_content(now_ts))
+        except Exception:
+            # The status file is optional: never let it break the cycle.
+            log.exception("could not write the status file %s", status.path)
 
     def send(self, cycle: CycleResult, text: str) -> bool:
         ok = self.notifier.send(text)
