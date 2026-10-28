@@ -8,7 +8,7 @@ Servizio leggero per Raspberry Pi che monitora azioni, ETF e crypto con dati gra
 - Notifiche: Telegram Bot API, con filtri antispam (cooldown, quiet hours, batch)
 - Nessun consiglio di investimento: solo dati e soglie superate
 
-> Stato: scaffolding e documentazione. Il codice si sviluppa con Claude Code seguendo `docs/ROADMAP.md`. Il contesto per Claude Code è in `CLAUDE.md`.
+> Stato: v1 (milestone M0-M7) completa, collaudo sul Raspberry (M8) da fare. Avanzamento in `docs/ROADMAP.md`, contesto per Claude Code in `CLAUDE.md`. Guida completa di installazione e collaudo: `docs/DEPLOY.md`.
 
 ## Requisiti
 
@@ -29,7 +29,7 @@ cp config/watchlist.example.yaml config/watchlist.yaml
 cp config/alerts.example.yaml    config/alerts.yaml
 ```
 
-Prova (dopo la milestone M0-M4):
+Prova:
 
 ```bash
 export PYTHONPATH=src
@@ -37,13 +37,14 @@ export PYTHONPATH=src
 .venv/bin/python -m market_monitor check-symbols
 .venv/bin/python -m market_monitor test-telegram
 .venv/bin/python -m market_monitor run --once --dry-run
+.venv/bin/python -m market_monitor digest --now --dry-run
 ```
 
 Come servizio:
 
 ```bash
-sudo cp deploy/market-monitor.service /etc/systemd/system/
-sudo nano /etc/systemd/system/market-monitor.service   # adatta User e percorsi
+sed -e "s#User=pi#User=$USER#" -e "s#/home/pi/market-monitor#$HOME/market-monitor#g" \
+    deploy/market-monitor.service | sudo tee /etc/systemd/system/market-monitor.service
 sudo systemctl daemon-reload
 sudo systemctl enable --now market-monitor
 journalctl -u market-monitor -f
