@@ -212,6 +212,29 @@ def cmd_run(args: argparse.Namespace) -> int:
         service.close()
 
 
+def cmd_digest(args: argparse.Namespace) -> int:
+    manager = ConfigManager(Path(args.config_dir))
+    try:
+        manager.load()
+    except ConfigError as exc:
+        log.error("Configurazione NON valida (%s): lancia check-config per i dettagli.", args.config_dir)
+        for error in exc.errors:
+            log.error("  - %s", error)
+        return 1
+    notifier = DryRunNotifier() if args.dry_run else make_telegram_notifier(args, manager.config)
+    if notifier is None:
+        return 1
+    service = Service(manager, notifier, dry_run=args.dry_run, configure_logging=False)
+    try:
+        if service.send_digest_now():
+            log.info("Riepilogo inviato.")
+            return 0
+        log.error("Invio del riepilogo fallito (dettagli sopra).")
+        return 1
+    finally:
+        service.close()
+
+
 def build_parser() -> argparse.ArgumentParser:
     parser = argparse.ArgumentParser(prog="market_monitor", description="Market Monitor")
     parser.add_argument("--version", action="version", version=f"%(prog)s {__version__}")
@@ -228,6 +251,10 @@ def build_parser() -> argparse.ArgumentParser:
     run.add_argument("--once", action="store_true", help="un solo ciclo, poi esce")
     run.add_argument("--dry-run", action="store_true", help="mostra i messaggi invece di inviarli, non scrive nel database")
     run.set_defaults(func=cmd_run)
+    digest = sub.add_parser("digest", help="riepilogo giornaliero")
+    digest.add_argument("--now", action="store_true", required=True, help="genera e invia subito il riepilogo")
+    digest.add_argument("--dry-run", action="store_true", help="mostra il riepilogo invece di inviarlo")
+    digest.set_defaults(func=cmd_digest)
     return parser
 
 
