@@ -13,6 +13,9 @@ Environment=PYTHONUNBUFFERED=1
 ExecStart=/home/pi/market-monitor/.venv/bin/python -m market_monitor web
 Restart=on-failure
 RestartSec=30
+# Exit 78 = configuration problem (e.g. WEB_PASSWORD missing): no restart loop,
+# the reason is in journalctl -u market-monitor-web.
+RestartPreventExitStatus=78
 TimeoutStopSec=15
 Nice=10
 MemoryMax=100M

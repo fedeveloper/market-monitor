@@ -33,6 +33,8 @@ from market_monitor.service import Service
 
 log = logging.getLogger("market_monitor")
 
+EXIT_CONFIG = 78  # sysexits.h EX_CONFIG: only the user can fix it, restarting does not help
+
 
 def _pct(value: float) -> str:
     return f"{value:g}".replace(".", ",") + "%"
@@ -98,6 +100,14 @@ def cmd_check_config(args: argparse.Namespace) -> int:
         "Telegram: token %s, chat id %s",
         "presente" if secrets.telegram_bot_token else "mancante",
         "presente" if secrets.telegram_chat_id else "mancante",
+    )
+    from market_monitor.web.server import password_problem
+
+    web_problem = password_problem(app.web.host, secrets.web_password)
+    log.info(
+        "Interfaccia web (comando web): %s:%d, %s",
+        app.web.host, app.web.port,
+        "password ok" if web_problem is None else f"non partirebbe: {web_problem}",
     )
     for warning in list(config.warnings) + secret_warnings:
         log.warning("Avviso: %s", warning)
@@ -283,7 +293,10 @@ def cmd_web(args: argparse.Namespace) -> int:
     problem = password_problem(host, secrets.web_password)
     if problem:
         log.error("%s", problem)
-        return 1
+        log.error("Dopo la correzione: sudo systemctl restart market-monitor-web")
+        # EX_CONFIG: the unit does not restart in a loop on it (RestartPreventExitStatus),
+        # and systemctl status shows "status=78/CONFIG".
+        return EXIT_CONFIG
     setup_logging(level="INFO")  # stdout only: journald under systemd
     app = WebApp(config_dir, Path(args.env_file), password=secrets.web_password)
     try:
