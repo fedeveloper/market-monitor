@@ -57,7 +57,7 @@ journalctl -u market-monitor -f
 | `config/config.yaml` | intervallo, fuso orario, mercati e orari, provider, Telegram, storage, log |
 | `config/watchlist.yaml` | asset monitorati (azioni, ETF, crypto), livelli di prezzo personali, override per asset |
 | `config/alerts.yaml` | regole di alert per classe di asset, antispam, riepilogo giornaliero, salute del servizio |
-| `.env` | `TELEGRAM_BOT_TOKEN`, `TELEGRAM_CHAT_ID` (mai nel repo) |
+| `.env` | `TELEGRAM_BOT_TOKEN`, `TELEGRAM_CHAT_ID`, `WEB_PASSWORD` (mai nel repo) |
 
 Le modifiche a watchlist e alert vengono lette al ciclo successivo, senza riavviare. Il catalogo degli alert è in `docs/ALERTS.md`.
 
@@ -65,4 +65,5 @@ Le modifiche a watchlist e alert vengono lette al ciclo successivo, senza riavvi
 
 - I dati gratuiti di Borsa Italiana e USA via Yahoo sono spesso ritardati (circa 15 minuti) e l'endpoint non è ufficiale: può cambiare. Il provider è isolato per poterlo sostituire.
 - Se non arriva più il riepilogo giornaliero, il servizio è fermo: controlla `systemctl status market-monitor`.
+- Interfaccia web di configurazione (M10): watchlist, soglie e impostazioni dal browser, con validazione prima del salvataggio. Guida in `docs/WEB.md`.
 - Integrazione con picoclaw (M9): un file di stato che l'agente di picoclaw può leggere, disattivato di default. Guida in `docs/PICOCLAW.md`.

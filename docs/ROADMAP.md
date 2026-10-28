@@ -85,7 +85,7 @@ Da iniziare solo dopo M8, con la v1 stabile sul Raspberry e conferma dell'utente
 - Test: schema e `schema_version`, scrittura atomica (nessun file parziale anche con un errore a metà), assenza di segreti, comportamento con fallimenti parziali dei provider.
 - Note: avviata su richiesta dell'utente; collaudo di M8 confermato in seguito. Lato picoclaw verificati workspace, `restrict_to_workspace` e `tools.allow_read_paths` nel suo `config.example.json`; da verificare sul Pi il formato esatto di `allow_read_paths` e la cartella delle skill (vedi `docs/PICOCLAW.md`).
 
-## Evolutiva 2 — M10: interfaccia web di configurazione `[ ]`
+## Evolutiva 2 — M10: interfaccia web di configurazione `[x]`
 
 Decisa con l'utente dopo il collaudo della v1 (la containerizzazione Docker è stata valutata e scartata).
 
@@ -95,6 +95,7 @@ Decisa con l'utente dopo il collaudo della v1 (la containerizzazione Docker è s
 - Pagina di stato: ultimi prezzi, alert recenti, salute dei provider (dal database, in sola lettura).
 - Sicurezza: password obbligatoria se in ascolto sulla rete, header anti-CSRF, limite alla dimensione delle richieste, nessun segreto esposto.
 - Test: salvataggio valido e non valido, backup, conflitti, autenticazione, CSRF, percorsi non ammessi, azioni con provider e Telegram simulati.
+- Note: guida in `docs/WEB.md`. Provata anche in un browser reale (Playwright): salvataggio di livelli e override, errore di validazione mostrato senza salvare, layout da telefono. Aggiunta la validazione del formato dei simboli (finiscono negli URL dei provider).
 
 ## Idee future
 
