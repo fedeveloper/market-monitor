@@ -442,3 +442,19 @@ def test_web_password_read_and_hidden(tmp_path):
     secrets = load_secrets(env, environ={})
     assert secrets.web_password == "sup3r-secret"
     assert "sup3r-secret" not in repr(secrets)
+
+
+@pytest.mark.parametrize("symbol", ["ENI.MI", "ETHEUR", "^GSPC", "EURUSD=X", "BRK-B"])
+def test_valid_symbols(config_dir, symbol):
+    data = config_dir.load("watchlist")
+    data["assets"][0]["symbol"] = symbol
+    config_dir.save("watchlist", data)
+    load_config(config_dir.path)
+
+
+@pytest.mark.parametrize("symbol", ["ENI/../x", "A B", "ENI?x=1", "x" * 33])
+def test_invalid_symbols(config_dir, symbol):
+    data = config_dir.load("watchlist")
+    data["assets"][0]["symbol"] = symbol
+    config_dir.save("watchlist", data)
+    assert "simbolo non valido" in errors_of(config_dir)[0]

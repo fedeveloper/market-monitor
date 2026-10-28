@@ -360,6 +360,18 @@ def _timezone(value: Any) -> ZoneInfo:
         raise _Invalid(f"fuso orario sconosciuto {value!r} (es. Europe/Rome)") from None
 
 
+# Provider symbols end up in URL paths: letters, digits and . ^ = _ - only
+# (e.g. ENI.MI, BTCEUR, ^GSPC, EURUSD=X, BRK-B).
+SYMBOL_FORMAT = re.compile(r"^[A-Za-z0-9.^=_-]{1,32}$")
+
+
+def _symbol(value: Any) -> str:
+    text = _str(value)
+    if not SYMBOL_FORMAT.match(text):
+        raise _Invalid(f"simbolo non valido {text!r}: ammessi lettere, cifre e . ^ = _ - (max 32)")
+    return text
+
+
 def _url(value: Any) -> str:
     text = _str(value)
     if not re.match(r"https?://[^/\s]+", text):
@@ -828,7 +840,7 @@ def parse_watchlist(
         item = _mapping(ctx, item, base_path)
         if item is None:
             continue
-        symbol = _get(ctx, item, "symbol", base_path, _str)
+        symbol = _get(ctx, item, "symbol", base_path, _symbol)
         path = f"{base_path} ({symbol})" if symbol else base_path
         _unknown_keys(ctx, item, path, _ASSET_KEYS)
         name = _get(ctx, item, "name", path, _str, default=symbol)

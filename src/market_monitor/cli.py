@@ -20,7 +20,8 @@ from market_monitor.config import (
     load_config,
     load_secrets,
 )
-from market_monitor.formatting import escape, format_pct, format_price
+from market_monitor.formatting import format_pct, format_price
+from market_monitor.messages import test_message
 from market_monitor.logging_setup import PLAIN_FORMAT, register_secret, setup_logging
 from market_monitor.notifier import DryRunNotifier, Notifier, TelegramNotifier
 from market_monitor.providers import ProviderError, build_providers
@@ -167,12 +168,7 @@ def cmd_test_telegram(args: argparse.Namespace, session=None) -> int:
     notifier = make_telegram_notifier(args, config, session=session)
     if notifier is None:
         return 1
-    now = datetime.now(config.app.timezone).strftime("%d/%m/%Y %H:%M")
-    text = (
-        "<b>Market Monitor</b> · messaggio di prova\n"
-        f"Inviato il {escape(now)}. Asset in watchlist: {len(config.enabled_assets)}.\n"
-        "Se lo leggi, token e chat id sono corretti."
-    )
+    text = test_message(time.time(), config.app.timezone, len(config.enabled_assets))
     if notifier.send(text):
         log.info("Messaggio di prova inviato.")
         return 0
