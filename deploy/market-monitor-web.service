@@ -1,0 +1,21 @@
+[Unit]
+Description=Market Monitor - interfaccia web di configurazione
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=simple
+# Adatta User e percorsi alla tua installazione (vedi docs/WEB.md).
+User=pi
+WorkingDirectory=/home/pi/market-monitor
+Environment=PYTHONPATH=/home/pi/market-monitor/src
+Environment=PYTHONUNBUFFERED=1
+ExecStart=/home/pi/market-monitor/.venv/bin/python -m market_monitor web
+Restart=on-failure
+RestartSec=30
+TimeoutStopSec=15
+Nice=10
+MemoryMax=100M
+
+[Install]
+WantedBy=multi-user.target

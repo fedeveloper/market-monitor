@@ -5,10 +5,13 @@ from __future__ import annotations
 import argparse
 import logging
 import signal
+import threading
 import time
 from collections import Counter
 from datetime import datetime
 from pathlib import Path
+
+import yaml
 
 from market_monitor import __version__
 from market_monitor.config import (
@@ -16,6 +19,7 @@ from market_monitor.config import (
     Config,
     ConfigError,
     ConfigManager,
+    WebConfig,
     check_secrets,
     load_config,
     load_secrets,
@@ -248,6 +252,57 @@ def cmd_status(args: argparse.Namespace) -> int:
     return 0
 
 
+def _web_settings(config_dir: Path) -> WebConfig:
+    """web.host/web.port, also when the configuration is invalid: the interface
+    must start anyway, to let the user fix it."""
+    try:
+        return load_config(config_dir).app.web
+    except ConfigError as exc:
+        log.warning("Configurazione non valida (%d errori): l'interfaccia parte comunque per correggerla.", len(exc.errors))
+    try:
+        raw = yaml.safe_load((config_dir / "config.yaml").read_text(encoding="utf-8")) or {}
+        web = raw.get("web") or {}
+        host, port = web.get("host", WebConfig.host), web.get("port", WebConfig.port)
+        if isinstance(host, str) and isinstance(port, int) and not isinstance(port, bool) and 0 < port < 65536:
+            return WebConfig(host=host, port=port)
+    except (OSError, yaml.YAMLError, AttributeError):
+        pass
+    return WebConfig()
+
+
+def cmd_web(args: argparse.Namespace) -> int:
+    from market_monitor.web.server import WebApp, make_server, password_problem
+
+    config_dir = Path(args.config_dir)
+    secrets = load_secrets(Path(args.env_file))
+    register_secret(secrets.telegram_bot_token)
+    register_secret(secrets.web_password)
+    settings = _web_settings(config_dir)
+    host = args.host or settings.host
+    port = args.port or settings.port
+    problem = password_problem(host, secrets.web_password)
+    if problem:
+        log.error("%s", problem)
+        return 1
+    setup_logging(level="INFO")  # stdout only: journald under systemd
+    app = WebApp(config_dir, Path(args.env_file), password=secrets.web_password)
+    try:
+        server = make_server(app, host, port)
+    except OSError as exc:
+        log.error("Impossibile aprire %s:%d: %s", host, port, exc)
+        return 1
+    signal.signal(signal.SIGTERM, lambda *_: threading.Thread(target=server.shutdown, daemon=True).start())
+    log.info("Interfaccia web su http://%s:%d (Ctrl+C per fermarla)", host, port)
+    try:
+        server.serve_forever()
+    except KeyboardInterrupt:
+        pass
+    finally:
+        server.server_close()
+    log.info("interfaccia web fermata")
+    return 0
+
+
 def build_parser() -> argparse.ArgumentParser:
     parser = argparse.ArgumentParser(prog="market_monitor", description="Market Monitor")
     parser.add_argument("--version", action="version", version=f"%(prog)s {__version__}")
@@ -271,6 +326,10 @@ def build_parser() -> argparse.ArgumentParser:
     status = sub.add_parser("status", help="file di stato per picoclaw (M9)")
     status.add_argument("--print", action="store_true", required=True, help="stampa il file di stato")
     status.set_defaults(func=cmd_status)
+    web = sub.add_parser("web", help="interfaccia web di configurazione (M10)")
+    web.add_argument("--host", help="indirizzo di ascolto (default: web.host di config.yaml)")
+    web.add_argument("--port", type=int, help="porta (default: web.port di config.yaml)")
+    web.set_defaults(func=cmd_web)
     return parser
 
 
