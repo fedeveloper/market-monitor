@@ -25,7 +25,7 @@ La v1 (senza agente AI) comprende le milestone M0-M8. Le evolutive (M9 in poi) p
 - Fixture JSON salvate in `tests/fixtures/` (da risposte reali, ripulite). Test di parsing, dati `null`, errori HTTP.
 - Note: Binance verificato con risposte reali (mirror `data-api.binance.vision`); Yahoo rispondeva 429 dal cloud, fixture sintetica. **Da completare sul Pi**: formato reale Yahoo, ritardo dei dati, validità dei simboli (vedi `docs/DEPLOY.md`).
 
-## M2 — Storage `[ ]`
+## M2 — Storage `[x]`
 
 - Schema SQLite (vedi `docs/ARCHITECTURE.md`), un commit per ciclo, `WAL` valutato rispetto alle scritture su SD.
 - Salvataggio campioni, query di finestra per `fast_move`, retention giornaliera.
