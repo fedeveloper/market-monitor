@@ -351,7 +351,7 @@ async function renderStatus() {
     return el("tr", {},
       el("td", {}, a.name, el("span", { class: "key" }, a.symbol)),
       el("td", { class: "num" }, formatPrice(a.price, a.currency)),
-      el("td", { class: `num ${change > 0 ? "up" : change < 0 ? "down" : ""}` }, formatPct(change), " ", a.change_reference === "rolling_24h" ? "24h" : "oggi"),
+      el("td", { class: `num ${change > 0 ? "up" : change < 0 ? "down" : ""}` }, formatPct(change), change === null || change === undefined ? "" : (a.change_reference === "rolling_24h" ? " 24h" : " oggi")),
       el("td", {}, formatTime(a.quote_time)),
       el("td", {}, a.market_open ? "aperto" : "chiuso"));
   });
