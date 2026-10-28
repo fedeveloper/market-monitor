@@ -78,6 +78,10 @@ Prima di partire il servizio esegue `check-config`: se la configurazione non è 
 
 I log vanno sia nel journal sia in `logs/market-monitor.log` (con rotazione: 1 MB per 3 file). Per scrivere meno sulla SD puoi mettere `file: null` nella sezione `logging` di `config.yaml` e tenere solo il journal.
 
+### Interfaccia web (facoltativa)
+
+Per configurare il servizio dal browser invece che modificando i file: `docs/WEB.md` (password in `.env`, servizio `market-monitor-web`).
+
 ## 5. Aggiornamento
 
 ```bash
@@ -86,6 +90,7 @@ git pull
 .venv/bin/pip install -r requirements.txt
 PYTHONPATH=src .venv/bin/python -m market_monitor check-config
 sudo systemctl restart market-monitor
+sudo systemctl restart market-monitor-web    # solo se usi l'interfaccia web
 journalctl -u market-monitor -n 30
 ```
 

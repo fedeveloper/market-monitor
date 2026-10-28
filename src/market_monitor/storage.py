@@ -79,8 +79,12 @@ class SentAlert:
 
 
 class Storage:
-    def __init__(self, path: Path | str):
+    def __init__(self, path: Path | str, read_only: bool = False):
         self.path = str(path)
+        if read_only:
+            # Used by the web interface: never creates or changes the database.
+            self.conn = sqlite3.connect(f"{Path(self.path).resolve().as_uri()}?mode=ro", uri=True)
+            return
         if self.path != ":memory:":
             Path(self.path).parent.mkdir(parents=True, exist_ok=True)
         self.conn = sqlite3.connect(self.path)

@@ -54,8 +54,16 @@ python -m market_monitor check-config        # valida config, watchlist e alert
 python -m market_monitor check-symbols       # prova ogni simbolo con il suo provider
 python -m market_monitor test-telegram       # invia un messaggio di prova
 python -m market_monitor digest --now        # genera e invia subito il riepilogo
-python -m market_monitor status --print      # solo M9 (dopo la v1): stampa il file di stato
+python -m market_monitor status --print      # M9: stampa il file di stato
+python -m market_monitor web                 # M10: interfaccia web di configurazione
 ```
+
+## Interfaccia web (M10)
+
+- Processo separato (`python -m market_monitor web`, suo servizio systemd): se l'interfaccia ha un problema il monitor continua a girare. Le due parti comunicano solo tramite i file YAML (ricarica a caldo), il database SQLite in sola lettura e il file di stato.
+- Solo standard library (`http.server`) e una pagina HTML con JavaScript senza build: nessuna nuova dipendenza.
+- Accesso dalla rete di casa con password (`WEB_PASSWORD` in `.env`), protezione CSRF con un header obbligatorio sulle richieste che modificano. Token e chat id non si vedono e non si modificano dall'interfaccia.
+- Ogni salvataggio valida i file con lo stesso codice di `check-config`, fa una copia `.bak` e scrive in modo atomico. Accettato con l'utente: i file salvati dall'interfaccia perdono i commenti (i riferimenti restano nei `*.example.yaml`).
 
 ## Test
 

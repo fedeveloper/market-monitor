@@ -41,6 +41,15 @@ def quote_line(asset: Asset, quote: Quote) -> str:
     return text
 
 
+def test_message(now_ts: float, tz: ZoneInfo, asset_count: int) -> str:
+    when = datetime.fromtimestamp(now_ts, tz).strftime("%d/%m/%Y %H:%M")
+    return (
+        "<b>Market Monitor</b> · messaggio di prova\n"
+        f"Inviato il {escape(when)}. Asset in watchlist: {asset_count}.\n"
+        "Se lo leggi, token e chat id sono corretti."
+    )
+
+
 def window_label(minutes: int) -> str:
     if minutes == 60:
         return "1 ora"
