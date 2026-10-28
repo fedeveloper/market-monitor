@@ -95,6 +95,40 @@ def fetch_all(
     return results
 
 
+def _local_midnight(now_ts: float, tz) -> int:
+    return int(datetime.combine(datetime.fromtimestamp(now_ts, tz).date(), datetime.min.time(), tz).timestamp())
+
+
+def digest_text(config: Config, storage: Storage, now_ts: float) -> str:
+    """The daily digest from the stored data (used by the service and the web interface)."""
+    data = DigestData(
+        rows=[(a, storage.last_quote(a.symbol)) for a in config.enabled_assets],
+        alerts_today=storage.sent_alerts(_local_midnight(now_ts, config.alerts.digest.timezone)),
+        health=storage.all_provider_health(),
+    )
+    return build_digest(data, now_ts, config.alerts.digest)
+
+
+def status_content(config: Config, storage: Storage, now_ts: float) -> dict:
+    """The status file content (M9), also shown by the web interface."""
+    last_digest = storage.get("last_digest_at")
+    midnight = _local_midnight(now_ts, config.app.timezone)
+    data = StatusData(
+        now_ts=now_ts,
+        interval_minutes=config.app.interval_minutes,
+        tz=config.app.timezone,
+        rows=[
+            (a, storage.last_quote(a.symbol), markets.is_open(config.app.markets[a.market], now_ts))
+            for a in config.enabled_assets
+        ],
+        recent_alerts=storage.recent_sent_alerts(config.app.status_file.recent_alerts),
+        levels_today=[a for a in storage.sent_alerts(midnight) if a.rule.startswith("level_")],
+        health=storage.all_provider_health(),
+        last_digest_ts=int(last_digest) if last_digest else None,
+    )
+    return build_status(data)
+
+
 class Service:
     def __init__(
         self,
@@ -271,15 +305,7 @@ class Service:
     # --- digest ------------------------------------------------------------------------
 
     def digest_text(self, now_ts: float) -> str:
-        config = self.config
-        tz = config.alerts.digest.timezone
-        midnight = datetime.combine(datetime.fromtimestamp(now_ts, tz).date(), datetime.min.time(), tz)
-        data = DigestData(
-            rows=[(a, self.storage.last_quote(a.symbol)) for a in config.enabled_assets],
-            alerts_today=self.storage.sent_alerts(int(midnight.timestamp())),
-            health=self.storage.all_provider_health(),
-        )
-        return build_digest(data, now_ts, config.alerts.digest)
+        return digest_text(self.config, self.storage, now_ts)
 
     def maybe_digest(self, cycle: CycleResult) -> None:
         day = digest_due(cycle.now_ts, self.config.alerts.digest, self.storage.get("last_digest"))
@@ -297,26 +323,7 @@ class Service:
     # --- status file (M9) --------------------------------------------------------
 
     def status_content(self, now_ts: float) -> dict:
-        config = self.config
-        tz = config.app.timezone
-        midnight = datetime.combine(datetime.fromtimestamp(now_ts, tz).date(), datetime.min.time(), tz)
-        last_digest = self.storage.get("last_digest_at")
-        data = StatusData(
-            now_ts=now_ts,
-            interval_minutes=config.app.interval_minutes,
-            tz=tz,
-            rows=[
-                (a, self.storage.last_quote(a.symbol), markets.is_open(config.app.markets[a.market], now_ts))
-                for a in config.enabled_assets
-            ],
-            recent_alerts=self.storage.recent_sent_alerts(config.app.status_file.recent_alerts),
-            levels_today=[
-                a for a in self.storage.sent_alerts(int(midnight.timestamp())) if a.rule.startswith("level_")
-            ],
-            health=self.storage.all_provider_health(),
-            last_digest_ts=int(last_digest) if last_digest else None,
-        )
-        return build_status(data)
+        return status_content(self.config, self.storage, now_ts)
 
     def write_status(self, now_ts: float) -> None:
         status = self.config.app.status_file

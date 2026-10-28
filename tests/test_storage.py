@@ -1,3 +1,5 @@
+import sqlite3
+
 import pytest
 
 from market_monitor.models import Quote
@@ -114,3 +116,18 @@ def test_recent_sent_alerts_newest_first(storage):
         storage.log_sent_alert(SentAlert(ts, "ENI.MI", "day_move", str(ts)))
     assert [a.ts for a in storage.recent_sent_alerts(2)] == [30, 20]
     assert storage.recent_sent_alerts(0) == []
+
+
+def test_read_only_mode(tmp_path):
+    path = tmp_path / "market.db"
+    with pytest.raises(sqlite3.OperationalError):
+        Storage(path, read_only=True)  # does not create the file
+    db = Storage(path)
+    db.save_quote(q(1000, 14.0))
+    db.commit()
+    reader = Storage(path, read_only=True)
+    assert reader.last_quote("ENI.MI").price == 14.0
+    with pytest.raises(sqlite3.OperationalError):
+        reader.save_quote(q(2000, 15.0))
+    reader.close()
+    db.close()
