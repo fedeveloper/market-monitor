@@ -31,7 +31,7 @@ La v1 (senza agente AI) comprende le milestone M0-M8. Le evolutive (M9 in poi) p
 - Salvataggio campioni, query di finestra per `fast_move`, retention giornaliera.
 - Test su database in memoria e su file temporaneo.
 
-## M3 — Notifiche Telegram `[ ]`
+## M3 — Notifiche Telegram `[x]`
 
 - `TelegramNotifier`: `sendMessage` con `requests`, `parse_mode=HTML` con escape, split oltre il limite, retry breve, token mascherato nei log.
 - Formattazione italiana dei numeri e dei messaggi.
