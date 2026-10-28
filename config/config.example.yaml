@@ -66,3 +66,9 @@ status_file:
   path: /dev/shm/market-monitor/status.json
   # Numero di alert recenti inclusi nel file.
   recent_alerts: 20
+
+# Interfaccia web di configurazione (M10, comando `web`, vedi docs/WEB.md).
+# La password e' WEB_PASSWORD in .env: obbligatoria se host non e' 127.0.0.1.
+web:
+  host: 0.0.0.0     # 0.0.0.0 = raggiungibile dalla rete di casa; 127.0.0.1 = solo dal Pi
+  port: 8080

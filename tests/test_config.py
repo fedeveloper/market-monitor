@@ -422,3 +422,23 @@ def test_status_file_invalid(config_dir):
     errors = errors_of(config_dir)
     assert "config.yaml: status_file.recent: chiave sconosciuta (refuso?), ammesse: enabled, path, recent_alerts" in errors
     assert "config.yaml: status_file.enabled: deve essere true o false" in errors
+
+
+def test_web_section(config_dir):
+    assert load_config(config_dir.path).app.web.port == 8080
+    app = config_dir.load("config")
+    app["web"] = {"host": "127.0.0.1", "port": 9000}
+    config_dir.save("config", app)
+    web = load_config(config_dir.path).app.web
+    assert (web.host, web.port) == ("127.0.0.1", 9000)
+    app["web"] = {"port": 70000}
+    config_dir.save("config", app)
+    assert errors_of(config_dir) == ["config.yaml: web.port: deve essere tra 1 e 65535, trovato 70000"]
+
+
+def test_web_password_read_and_hidden(tmp_path):
+    env = tmp_path / ".env"
+    env.write_text("WEB_PASSWORD=sup3r-secret\n", encoding="utf-8")
+    secrets = load_secrets(env, environ={})
+    assert secrets.web_password == "sup3r-secret"
+    assert "sup3r-secret" not in repr(secrets)

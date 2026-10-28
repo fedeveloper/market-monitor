@@ -106,6 +106,14 @@ class StatusFileConfig:
 
 
 @dataclass(frozen=True)
+class WebConfig:
+    """M10: web configuration interface (``web`` command)."""
+
+    host: str = "0.0.0.0"
+    port: int = 8080
+
+
+@dataclass(frozen=True)
 class AppConfig:
     interval_minutes: int
     align_to_clock: bool
@@ -116,6 +124,7 @@ class AppConfig:
     storage: StorageConfig
     logging: LoggingConfig
     status_file: StatusFileConfig = StatusFileConfig()
+    web: WebConfig = WebConfig()
 
 
 # Rule fields other than ``enabled`` are None only when the rule is disabled.
@@ -233,11 +242,16 @@ class Config:
 class Secrets:
     telegram_bot_token: str | None = field(default=None, repr=False)
     telegram_chat_id: str | None = field(default=None, repr=False)
+    web_password: str | None = field(default=None, repr=False)
 
     def __repr__(self) -> str:
-        token = "set" if self.telegram_bot_token else "missing"
-        chat = "set" if self.telegram_chat_id else "missing"
-        return f"Secrets(telegram_bot_token=<{token}>, telegram_chat_id=<{chat}>)"
+        def state(value: str | None) -> str:
+            return "<set>" if value else "<missing>"
+
+        return (
+            f"Secrets(telegram_bot_token={state(self.telegram_bot_token)}, "
+            f"telegram_chat_id={state(self.telegram_chat_id)}, web_password={state(self.web_password)})"
+        )
 
 
 # ---------------------------------------------------------------------------
@@ -476,7 +490,7 @@ def parse_app_config(data: Any, base_dir: Path, errors: list[str], warnings: lis
     n_errors = len(errors)
     sections = (
         "interval_minutes", "align_to_clock", "timezone", "markets", "providers",
-        "telegram", "storage", "logging", "status_file",
+        "telegram", "storage", "logging", "status_file", "web",
     )
     _unknown_keys(ctx, data, "", sections)
 
@@ -560,9 +574,19 @@ def parse_app_config(data: Any, base_dir: Path, errors: list[str], warnings: lis
         if None not in (enabled, path, recent):
             status_file = StatusFileConfig(enabled=enabled, path=_resolve(base_dir, path), recent_alerts=recent)
 
+    web = WebConfig()
+    wb = _mapping(ctx, data.get("web"), "web", required=False)
+    if wb is not None:
+        _unknown_keys(ctx, wb, "web", ("host", "port"))
+        host = _get(ctx, wb, "host", "web", _str, default=WebConfig.host)
+        port = _get(ctx, wb, "port", "web", _int_range(1, 65535), default=WebConfig.port)
+        if host is not None and port is not None:
+            web = WebConfig(host=host, port=port)
+
     if len(errors) > n_errors:
         return None
     return AppConfig(
+        web=web,
         status_file=status_file,
         interval_minutes=interval,
         align_to_clock=align,
@@ -982,7 +1006,7 @@ def parse_env_file(path: Path) -> dict[str, str]:
 
 
 def load_secrets(env_path: Path, environ: Mapping[str, str] | None = None) -> Secrets:
-    """Read Telegram secrets. Process environment variables (e.g. systemd's
+    """Read the secrets (Telegram, web password). Process environment variables (e.g. systemd's
     EnvironmentFile) take precedence over the .env file."""
     environ = os.environ if environ is None else environ
     file_values = parse_env_file(env_path)
@@ -991,7 +1015,11 @@ def load_secrets(env_path: Path, environ: Mapping[str, str] | None = None) -> Se
         value = environ.get(key) or file_values.get(key)
         return value.strip() if value and value.strip() else None
 
-    return Secrets(telegram_bot_token=pick("TELEGRAM_BOT_TOKEN"), telegram_chat_id=pick("TELEGRAM_CHAT_ID"))
+    return Secrets(
+        telegram_bot_token=pick("TELEGRAM_BOT_TOKEN"),
+        telegram_chat_id=pick("TELEGRAM_CHAT_ID"),
+        web_password=pick("WEB_PASSWORD"),
+    )
 
 
 def check_secrets(secrets: Secrets) -> tuple[list[str], list[str]]:
