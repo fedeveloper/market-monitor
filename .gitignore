@@ -3,6 +3,7 @@
 config/config.yaml
 config/watchlist.yaml
 config/alerts.yaml
+config/*.bak
 
 # Runtime data
 data/
