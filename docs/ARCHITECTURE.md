@@ -92,6 +92,7 @@ Stima volume: 20 asset x 96 campioni/giorno x 30 giorni circa 58.000 righe, poch
 - Orari base in `config.yaml` (IT 09:00-17:30 Europe/Rome, US 09:30-16:00 America/New_York, giorni feriali, CRYPTO sempre aperto).
 - Le festività non sono in un calendario: se l'ultimo dato del provider è più vecchio di `health.stale_data_minutes` (default 45 in `alerts.yaml`, per tollerare il ritardo di circa 15 minuti dei dati gratuiti), il mercato è trattato come chiuso e quell'asset non genera alert nel ciclo.
 - Le finestre di confronto (`fast_move`) non attraversano mai la notte o il weekend per azioni ed ETF: si usano solo campioni della stessa sessione.
+- Fuori orario i titoli non vengono interrogati. Dopo la chiusura restano altri 20 minuti di letture (`CLOSE_GRACE_MINUTES` in `markets.py`), per avere il prezzo finale nonostante il ritardo di circa 15 minuti.
 
 ## Provider: formato delle risposte (verifica M1)
 

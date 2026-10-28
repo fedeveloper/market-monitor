@@ -38,12 +38,13 @@ La v1 (senza agente AI) comprende le milestone M0-M8. Le evolutive (M9 in poi) p
 - CLI: `test-telegram`.
 - Test con `requests` simulato: split, escape, errori 4xx/5xx, nessun token nei log.
 
-## M4 — Ciclo completo e primo end-to-end `[ ]`
+## M4 — Ciclo completo e primo end-to-end `[x]`
 
 - Scheduler allineato agli slot dell'intervallo, mercato aperto/chiuso, controllo di freschezza del dato.
 - Ciclo: fetch di tutti gli asset, salvataggio, messaggio di prova con le variazioni (senza motore alert).
 - CLI: `run`, `run --once`, `run --once --dry-run`.
 - Prova reale sul Raspberry: tempi di un ciclo, RSS, CPU.
+- Note: ogni ciclo logga durata e RSS (`cycle done in ...`); la prova reale sul Pi è nella checklist di `docs/DEPLOY.md`. `--dry-run` non scrive nel database. I mercati con orari vengono letti fino a 20 minuti dopo la chiusura, per avere il prezzo finale nonostante il ritardo dei dati.
 
 ## M5 — Motore degli alert `[ ]`
 
