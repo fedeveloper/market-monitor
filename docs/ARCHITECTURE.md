@@ -73,7 +73,17 @@ CREATE TABLE provider_health (
   alerted INTEGER NOT NULL DEFAULT 0
 );
 CREATE TABLE kv (key TEXT PRIMARY KEY, value TEXT);   -- es. ultimo digest inviato
+-- Aggiunte in M2:
+CREATE TABLE sent_alerts (ts INTEGER, symbol TEXT, rule TEXT, detail TEXT);  -- alert inviati (digest: livelli raggiunti)
+CREATE TABLE sent_messages (ts INTEGER);                                     -- messaggi di alert inviati (limite orario)
 ```
+
+Note di implementazione (M2):
+- `quotes` ha in più la colonna `currency` ed è `WITHOUT ROWID`. La chiave `(symbol, ts)` usa l'orario del dato, non quello del ciclo: un dato vecchio letto di nuovo (mercato chiuso, festivo) non viene duplicato.
+- `alert_state.rule` contiene la chiave dello stato, non solo il nome della regola: `fast_move`, `day_move:up:3`, `day_move:down:5`, `open_gap`, `level_above:70000`, `level_below:50000`. Ogni gradino e ogni livello ha il suo stato e il suo cooldown.
+- Un solo commit per ciclo (`Storage.commit()` alla fine del ciclo); se il ciclo fallisce a metà, niente viene scritto.
+- `journal_mode=WAL` con `synchronous=NORMAL`: per un piccolo commit ogni 15 minuti il WAL scrive in append e fa meno `fsync` del journal classico, che a ogni commit crea e cancella un file. Restano i file `market.db-wal` e `market.db-shm` accanto al database: è normale.
+- Retention: una volta al giorno (`kv.last_prune`) si cancellano i campioni e lo storico degli alert più vecchi di `storage.retention_days`.
 
 Stima volume: 20 asset x 96 campioni/giorno x 30 giorni circa 58.000 righe, pochi MB.
 
