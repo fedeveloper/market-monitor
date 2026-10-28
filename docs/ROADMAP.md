@@ -64,12 +64,13 @@ La v1 (senza agente AI) comprende le milestone M0-M8. Le evolutive (M9 in poi) p
 - Contatori di fallimenti per provider, messaggi di errore e recupero, nessuna ripetizione.
 - Note: un ciclo di un provider è fallito se tutte le sue letture falliscono (i mercati chiusi non contano). I messaggi di salute rispettano le quiet hours e partono alla fine della fascia se la situazione è la stessa. Un digest non inviato all'ora prevista (servizio fermo) parte entro 4 ore, poi si salta. `digest --now` non segna come inviato il digest del giorno; con `--dry-run` lo mostra senza inviarlo.
 
-## M8 — Deploy e collaudo sul Raspberry `[ ]`
+## M8 — Deploy e collaudo sul Raspberry `[~]`
 
 - Adatta `deploy/market-monitor.service`, abilita il servizio, controlla `journalctl`.
 - Misura RSS e CPU a regime, dimensione del database dopo 48 ore.
 - Prova di resilienza: rete assente, Telegram non raggiungibile, provider che risponde 429, riavvio del Pi.
 - Taratura delle soglie in `alerts.yaml` dopo qualche giorno di uso reale.
+- Fatto: file `.service` adattato (`check-config` prima dell'avvio, `MemoryMax`, `TimeoutStopSec`), guida completa in `docs/DEPLOY.md`, prova di un ciclo reale dallo sviluppo (1,3 s, RSS 35 MB). **Da fare sul Pi**: tutta la sezione 6 di `docs/DEPLOY.md` (misure, resilienza, taratura). Quando la v1 gira stabile, segna `[x]`.
 
 ## Evolutiva 1 — M9: integrazione con picoclaw tramite file di stato `[ ]`
 

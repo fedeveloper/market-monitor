@@ -7,7 +7,7 @@ returning the last price, which soon becomes older than ``stale_data_minutes``.
 from __future__ import annotations
 
 from dataclasses import dataclass
-from datetime import datetime, timedelta
+from datetime import datetime
 
 from market_monitor.config import MarketHours
 
@@ -54,16 +54,3 @@ def should_fetch(market: MarketHours, now_ts: float) -> bool:
     """Fetch from the open until a short grace period after the close."""
     return is_open(market, now_ts, CLOSE_GRACE_MINUTES)
 
-
-def last_close_before(market: MarketHours, now_ts: float) -> int | None:
-    """Epoch of the most recent scheduled close at or before ``now_ts`` (None for crypto)."""
-    if market.always_open:
-        return None
-    local = datetime.fromtimestamp(now_ts, market.timezone)
-    for back in range(0, 8):
-        day = local.date() - timedelta(days=back)
-        if day.weekday() in market.days:
-            closes = datetime.combine(day, market.close, market.timezone)
-            if closes.timestamp() <= now_ts:
-                return int(closes.timestamp())
-    return None

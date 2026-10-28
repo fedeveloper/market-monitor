@@ -4,7 +4,7 @@ from zoneinfo import ZoneInfo
 import pytest
 
 from market_monitor.config import MarketHours
-from market_monitor.markets import CONTINUOUS, is_open, last_close_before, session_on, should_fetch
+from market_monitor.markets import CONTINUOUS, is_open, session_on, should_fetch
 from market_monitor.scheduler import next_run
 
 ROME = ZoneInfo("Europe/Rome")
@@ -56,13 +56,6 @@ def test_session():
     assert session.open_ts == ts(2026, 10, 28, 9, 0)
     assert session.close_ts == ts(2026, 10, 28, 17, 30)
     assert session_on(IT, ts(2026, 11, 1, 12, 0)) is None  # Sunday
-
-
-def test_last_close_before():
-    assert last_close_before(IT, ts(2026, 10, 28, 12, 0)) == ts(2026, 10, 27, 17, 30)
-    assert last_close_before(IT, ts(2026, 10, 28, 18, 0)) == ts(2026, 10, 28, 17, 30)
-    assert last_close_before(IT, ts(2026, 11, 2, 10, 0)) == ts(2026, 10, 30, 17, 30)  # Monday -> Friday
-    assert last_close_before(CRYPTO, 0) is None
 
 
 @pytest.mark.parametrize(
