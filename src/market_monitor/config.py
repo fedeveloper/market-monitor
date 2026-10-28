@@ -32,6 +32,8 @@ CONFIG_FILES = (CONFIG_FILE, WATCHLIST_FILE, ALERTS_FILE)
 ASSET_CLASSES = ("stock", "etf", "crypto")
 RULES = ("fast_move", "day_move", "open_gap")
 DAY_REFERENCES = ("prev_close", "rolling_24h")
+# Default day_move.rearm_pct when alerts.yaml does not set it (files copied before M5).
+DEFAULT_REARM_PCT = {"stock": 1.0, "etf": 0.6, "crypto": 1.5}
 WEEKDAYS = ("mon", "tue", "wed", "thu", "fri", "sat", "sun")
 LOG_LEVELS = ("DEBUG", "INFO", "WARNING", "ERROR", "CRITICAL")
 TELEGRAM_MAX_CHARS = 4096
@@ -120,6 +122,8 @@ class DayMoveRule:
     enabled: bool
     steps_pct: tuple[float, ...] | None = None
     reference: str | None = None
+    # A notified step re-arms when the change falls this many points below it.
+    rearm_pct: float | None = None
 
 
 @dataclass(frozen=True)
@@ -565,6 +569,7 @@ _RULE_FIELDS: dict[str, dict[str, Callable[[Any], Any]]] = {
         "enabled": _bool,
         "steps_pct": _steps,
         "reference": _choice(*DAY_REFERENCES),
+        "rearm_pct": _positive,
     },
     "open_gap": {
         "enabled": _bool,
@@ -605,6 +610,7 @@ def _build_rule(ctx: _Ctx, rule: str, asset_class: str, values: dict[str, Any], 
     values.setdefault("enabled", True)
     if rule == "day_move":
         values.setdefault("reference", "rolling_24h" if asset_class == "crypto" else "prev_close")
+        values.setdefault("rearm_pct", DEFAULT_REARM_PCT[asset_class])
     if values["enabled"]:
         missing = [k for k in _RULE_REQUIRED[rule] if k not in values]
         if missing:

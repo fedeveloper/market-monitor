@@ -4,19 +4,24 @@
 
 # Default per classe di asset. Un asset puo' sovrascrivere i singoli campi
 # con la sezione `overrides` in watchlist.yaml.
+#
+# day_move.rearm_pct: un gradino gia' notificato si riarma quando la variazione
+# rientra di questi punti percentuali sotto il gradino (es. gradino 3 e rearm 1.0:
+# si riarma sotto +2%). Il nuovo alert parte solo dopo il cooldown.
 defaults:
   stock:
     fast_move: {enabled: true, window_minutes: 60, threshold_pct: 2.0, step_pct: 1.0}
-    day_move:  {enabled: true, steps_pct: [3, 5, 8]}
+    day_move:  {enabled: true, steps_pct: [3, 5, 8], rearm_pct: 1.0}
     open_gap:  {enabled: true, threshold_pct: 2.0, max_delay_minutes: 45}
   etf:
     fast_move: {enabled: true, window_minutes: 60, threshold_pct: 1.2, step_pct: 0.6}
-    day_move:  {enabled: true, steps_pct: [2, 4, 6]}
+    day_move:  {enabled: true, steps_pct: [2, 4, 6], rearm_pct: 0.6}
     open_gap:  {enabled: true, threshold_pct: 1.0, max_delay_minutes: 45}
   crypto:
     fast_move: {enabled: true, window_minutes: 60, threshold_pct: 3.0, step_pct: 1.5}
-    # Per le crypto il riferimento e' la variazione sulle ultime 24 ore.
-    day_move:  {enabled: true, steps_pct: [5, 8, 12], reference: rolling_24h}
+    # Per le crypto il riferimento e' la variazione sulle ultime 24 ore,
+    # senza azzeramento a mezzanotte: un gradino torna a scattare solo dopo il riarmo.
+    day_move:  {enabled: true, steps_pct: [5, 8, 12], reference: rolling_24h, rearm_pct: 1.5}
     open_gap:  {enabled: false}
 
 # Livelli di prezzo personali (watchlist.yaml, campo `levels`).
