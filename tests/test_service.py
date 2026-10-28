@@ -246,3 +246,52 @@ def test_urgent_alert_passes_quiet_hours(small_watchlist):
     service.clock.advance(900)
     service.run_cycle()
     assert len(notifier.sent) == 1 and "‼️" in notifier.sent[0]
+
+
+def test_provider_down_and_recovered_messages(small_watchlist):
+    quotes = {
+        "ENI.MI": ProviderError("HTTP 429"),
+        "ENEL.MI": ProviderError("HTTP 429"),
+        "BTCEUR": quote("BTCEUR", WED_10, 1.0, 1.0),
+    }
+    clock = Clock(WED_10)
+    notifier = DryRunNotifier()
+    service, providers = make_service(small_watchlist, clock, quotes, notifier)
+    for _ in range(4):
+        providers["binance"].quotes["BTCEUR"] = quote("BTCEUR", int(clock()), 1.0, 1.0)
+        service.run_cycle()
+        clock.advance(900)
+    health_msgs = [m for m in notifier.sent if "provider" in m]
+    assert len(health_msgs) == 1 and "il provider yahoo non risponde da 3 cicli consecutivi" in health_msgs[0]
+    providers["yahoo"].quotes.update({s: quote(s, int(clock()), 1.0, 1.0) for s in ("ENI.MI", "ENEL.MI")})
+    providers["binance"].quotes["BTCEUR"] = quote("BTCEUR", int(clock()), 1.0, 1.0)
+    service.run_cycle()
+    assert "il provider yahoo funziona di nuovo" in notifier.sent[-1]
+    assert service.storage.provider_health("yahoo").alerted is False
+
+
+def test_daily_digest_sent_once(small_watchlist):
+    six_pm = at(2026, 10, 28, 18, 0)
+    quotes = {s: quote(s, six_pm - 1800, 1.0, 1.0) for s in ("ENI.MI", "ENEL.MI")}
+    quotes["BTCEUR"] = quote("BTCEUR", six_pm, 1.0, 1.0)
+    clock = Clock(six_pm - 900)
+    notifier = DryRunNotifier()
+    service, providers = make_service(small_watchlist, clock, quotes, notifier)
+    service.run_cycle()
+    assert not any("Riepilogo" in m for m in notifier.sent)
+    clock.advance(900)
+    service.run_cycle()
+    clock.advance(900)
+    service.run_cycle()
+    digests = [m for m in notifier.sent if "Riepilogo" in m]
+    assert len(digests) == 1 and "Eni (ENI.MI)" in digests[0]
+    assert service.storage.get("last_digest") == "2026-10-28"
+
+
+def test_cli_digest_now_dry_run(small_watchlist, capsys):
+    from market_monitor.cli import main
+
+    code = main(["--config-dir", str(small_watchlist.path), "--env-file", "/nonexistent", "digest", "--now", "--dry-run"])
+    assert code == 0
+    out = capsys.readouterr().out
+    assert "Riepilogo" in out and "nessun dato" in out

@@ -6,14 +6,16 @@ import logging
 import threading
 import time
 from collections.abc import Callable
-from dataclasses import dataclass, field
+from dataclasses import dataclass, field, replace
 from datetime import datetime
 
 from market_monitor import markets
 from market_monitor.config import Asset, Config, ConfigManager
 from market_monitor.logging_setup import setup_logging
 from market_monitor.alerts import AssetInput, Candidate, EngineSettings, evaluate
-from market_monitor.delivery import plan_delivery
+from market_monitor.delivery import plan_delivery, quiet_now
+from market_monitor.digest import DigestData, build_digest, digest_due
+from market_monitor.health import health_message, provider_outcome, update_health
 from market_monitor.messages import alert_fragment, alert_message
 from market_monitor.models import Quote
 from market_monitor.notifier import Notifier
@@ -158,8 +160,10 @@ class Service:
         return cycle
 
     def process(self, cycle: CycleResult) -> None:
-        """Evaluate the alert rules on the fresh quotes and deliver the alerts."""
+        """Alerts on the fresh quotes, provider health, and the daily digest when due."""
         self.deliver(cycle, self.evaluate_alerts(cycle))
+        self.check_health(cycle)
+        self.maybe_digest(cycle)
 
     def engine_settings(self) -> EngineSettings:
         config = self.config
@@ -231,6 +235,61 @@ class Service:
             self.storage.log_sent_alert(SentAlert(now, alert.symbol, alert.rule, detail))
             log.info("alert sent: %s %s %s", alert.symbol, alert.key, detail)
         self.storage.log_sent_message(now)
+
+    # --- health ------------------------------------------------------------------
+
+    def check_health(self, cycle: CycleResult) -> None:
+        config = self.config
+        fetches: dict[str, list[tuple[bool, str | None]]] = {}
+        for result in cycle.results:
+            if not result.skipped:
+                fetches.setdefault(result.asset.provider, []).append((result.quote is not None, result.error))
+        states = {}
+        events = []
+        for provider, results in fetches.items():
+            outcome, error = provider_outcome(results)
+            state, event = update_health(
+                provider, self.storage.provider_health(provider), outcome, error,
+                config.alerts.health.error_alert_after_failures,
+            )
+            if outcome is False:
+                log.warning("provider %s: every fetch failed (%d cycles in a row)", provider, state.consecutive_failures)
+            states[provider] = state
+            if event:
+                events.append(event)
+        if events and quiet_now(cycle.now_ts, config.alerts.delivery):
+            log.info("%d provider health messages held by quiet hours", len(events))
+            events = []
+        if events and self.send(cycle, health_message(events)):
+            for event in events:
+                states[event.provider] = replace(states[event.provider], alerted=event.kind == "down")
+        for provider, state in states.items():
+            self.storage.set_provider_health(provider, state)
+
+    # --- digest ------------------------------------------------------------------------
+
+    def digest_text(self, now_ts: float) -> str:
+        config = self.config
+        tz = config.alerts.digest.timezone
+        midnight = datetime.combine(datetime.fromtimestamp(now_ts, tz).date(), datetime.min.time(), tz)
+        data = DigestData(
+            rows=[(a, self.storage.last_quote(a.symbol)) for a in config.enabled_assets],
+            alerts_today=self.storage.sent_alerts(int(midnight.timestamp())),
+            health=self.storage.all_provider_health(),
+        )
+        return build_digest(data, now_ts, config.alerts.digest)
+
+    def maybe_digest(self, cycle: CycleResult) -> None:
+        day = digest_due(cycle.now_ts, self.config.alerts.digest, self.storage.get("last_digest"))
+        if day is None:
+            return
+        if self.send(cycle, self.digest_text(cycle.now_ts)):
+            self.storage.set("last_digest", day)
+            log.info("daily digest sent")
+
+    def send_digest_now(self) -> bool:
+        """``digest --now``: does not mark the scheduled digest as sent."""
+        return self.notifier.send(self.digest_text(self.clock()))
 
     def send(self, cycle: CycleResult, text: str) -> bool:
         ok = self.notifier.send(text)
