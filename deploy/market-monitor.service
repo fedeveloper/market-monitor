@@ -5,16 +5,23 @@ Wants=network-online.target
 
 [Service]
 Type=simple
-# Adatta User e percorsi alla tua installazione.
+# Adatta User e percorsi alla tua installazione (vedi docs/DEPLOY.md).
 User=pi
 WorkingDirectory=/home/pi/market-monitor
-EnvironmentFile=/home/pi/market-monitor/.env
+# Il servizio legge anche .env da solo; qui serve solo se vuoi i segreti nell'ambiente.
+EnvironmentFile=-/home/pi/market-monitor/.env
 Environment=PYTHONPATH=/home/pi/market-monitor/src
 Environment=PYTHONUNBUFFERED=1
+# Non parte se la configurazione non è valida (l'errore è in journalctl).
+ExecStartPre=/home/pi/market-monitor/.venv/bin/python -m market_monitor check-config
 ExecStart=/home/pi/market-monitor/.venv/bin/python -m market_monitor run
 Restart=always
 RestartSec=30
+TimeoutStopSec=30
 Nice=10
+# Rete di sicurezza: il servizio usa circa 35-45 MB. Ignorato se il kernel
+# non ha il controller cgroup "memory" attivo.
+MemoryMax=150M
 
 [Install]
 WantedBy=multi-user.target
