@@ -99,7 +99,7 @@ Stima volume: 20 asset x 96 campioni/giorno x 30 giorni circa 58.000 righe, poch
 Esito della verifica fatta in M1 (28/10/2026) dall'ambiente di sviluppo cloud:
 
 - **Binance** risponde HTTP 451 (blocco geografico) da `api.binance.com` per gli IP del cloud; dal Raspberry in Italia è atteso funzionante. Il mirror pubblico ufficiale `https://data-api.binance.vision` (solo dati di mercato, stesso formato) ha risposto e le sue risposte reali sono in `tests/fixtures/`. Se `api.binance.com` dovesse dare 451 anche dal Pi, basta cambiare `providers.binance.base_url`.
-- **Yahoo** risponde HTTP 429 agli IP del cloud anche alla prima richiesta: il formato non è stato verificato con una chiamata reale e la fixture è sintetica. **Da verificare sul Pi** con `check-symbols` (vedi `docs/DEPLOY.md`).
+- **Yahoo** risponde quasi sempre HTTP 429 agli IP del cloud. Una richiesta reale (ciclo `run --once --dry-run` in M8) è andata a buon fine ed è stata letta senza errori dal parser, ma la fixture resta sintetica. **Da verificare sul Pi** con `check-symbols` (vedi `docs/DEPLOY.md`).
 
 Yahoo `chart` (non ufficiale):
 - `GET https://query1.finance.yahoo.com/v8/finance/chart/{symbol}?interval=15m&range=1d`
