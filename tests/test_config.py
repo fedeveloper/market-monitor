@@ -393,3 +393,32 @@ def test_rearm_pct_defaults_for_older_alerts_file(config_dir):
     config = load_config(config_dir.path)
     assert asset(config, "ENI.MI").rules.day_move.rearm_pct == 1.0
     assert asset(config, "BTCEUR").rules.day_move.rearm_pct == 1.5
+
+
+def test_status_file_defaults_off(config_dir):
+    app = config_dir.load("config")
+    app.pop("status_file", None)
+    config_dir.save("config", app)
+    status = load_config(config_dir.path).app.status_file
+    assert status.enabled is False and status.recent_alerts == 20
+
+
+def test_status_file_from_example_and_relative_path(config_dir):
+    config = load_config(config_dir.path)
+    assert config.app.status_file.enabled is False
+    assert str(config.app.status_file.path) == "/dev/shm/market-monitor/status.json"
+    app = config_dir.load("config")
+    app["status_file"] = {"enabled": True, "path": "data/status.json", "recent_alerts": 5}
+    config_dir.save("config", app)
+    status = load_config(config_dir.path).app.status_file
+    assert status.enabled and status.recent_alerts == 5
+    assert status.path == config_dir.path.parent / "data" / "status.json"
+
+
+def test_status_file_invalid(config_dir):
+    app = config_dir.load("config")
+    app["status_file"] = {"enabled": "yes", "recent": 3}
+    config_dir.save("config", app)
+    errors = errors_of(config_dir)
+    assert "config.yaml: status_file.recent: chiave sconosciuta (refuso?), ammesse: enabled, path, recent_alerts" in errors
+    assert "config.yaml: status_file.enabled: deve essere true o false" in errors
