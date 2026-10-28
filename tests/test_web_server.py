@@ -275,5 +275,18 @@ def test_cli_refuses_network_bind_without_password(config_dir, capsys):
 
     env = config_dir.path.parent / ".env-empty"
     env.write_text("", encoding="utf-8")
-    assert main(["--config-dir", str(config_dir.path), "--env-file", str(env), "web"]) == 1
-    assert "WEB_PASSWORD mancante" in capsys.readouterr().out
+    assert main(["--config-dir", str(config_dir.path), "--env-file", str(env), "web"]) == 78
+    out = capsys.readouterr().out
+    assert "WEB_PASSWORD mancante" in out and "systemctl restart market-monitor-web" in out
+
+
+def test_check_config_reports_web_password(config_dir, capsys):
+    from market_monitor.cli import main
+
+    env = config_dir.path.parent / ".env-web"
+    env.write_text("WEB_PASSWORD=short\n", encoding="utf-8")
+    assert main(["--config-dir", str(config_dir.path), "--env-file", str(env), "check-config"]) == 0
+    assert "Interfaccia web (comando web): 0.0.0.0:8080, non partirebbe: WEB_PASSWORD troppo corta" in capsys.readouterr().out
+    env.write_text(f"WEB_PASSWORD={PASSWORD}\n", encoding="utf-8")
+    main(["--config-dir", str(config_dir.path), "--env-file", str(env), "check-config"])
+    assert "0.0.0.0:8080, password ok" in capsys.readouterr().out

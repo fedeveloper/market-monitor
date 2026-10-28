@@ -64,21 +64,68 @@ Non si modificano dall'interfaccia: token e chat id Telegram e `WEB_PASSWORD` (s
 ## 5. Sicurezza
 
 - Pensata per la **rete di casa**. Non aprire la porta 8080 sul router verso internet: la connessione è HTTP, non cifrata.
-- Per usarla da fuori casa: una VPN (es. WireGuard o Tailscale) oppure un tunnel SSH con `web.host: 127.0.0.1`:
+- Per usarla da fuori casa: Tailscale (sezione 6) o un'altra VPN, oppure un tunnel SSH con `web.host: 127.0.0.1`:
   ```bash
   ssh -L 8080:localhost:8080 <utente>@<indirizzo-del-pi>
   ```
   e poi `http://localhost:8080` sul tuo PC.
 - Protezioni: password con confronto a tempo costante e un secondo di attesa dopo una password sbagliata; header obbligatorio sulle richieste che modificano (blocca le richieste da altri siti); richieste limitate a 256 kB; Content-Security-Policy restrittiva; nessun segreto nelle risposte; i simboli accettano solo lettere, cifre e `. ^ = _ -`.
 
-## 6. Risorse
+## 6. Da fuori casa con Tailscale
+
+Con Tailscale attivo sul Pi e sul telefono, l'interfaccia è raggiungibile all'indirizzo Tailscale del Pi, senza aprire porte sul router.
+
+1. Sul Pi, l'indirizzo da usare:
+   ```bash
+   tailscale ip -4          # es. 100.101.102.103
+   ```
+2. Dal telefono, con l'app Tailscale connessa: `http://100.101.102.103:8080` (scrivi `http://` davanti e usa l'indirizzo IPv4 `100.x`, non quello IPv6 `fd7a:...`: l'interfaccia ascolta solo su IPv4).
+
+### HTTPS con `tailscale serve` (consigliato)
+
+Tailscale può pubblicare l'interfaccia in HTTPS, solo dentro la tua rete Tailscale. Nel pannello di Tailscale attiva una volta MagicDNS e i certificati HTTPS (DNS → HTTPS Certificates), poi sul Pi:
+
+```bash
+sudo tailscale serve --bg 8080
+tailscale serve status       # mostra l'indirizzo, es. https://raspberrypi.<tuo-tailnet>.ts.net
+```
+
+Apri quell'indirizzo dal telefono: la connessione è cifrata e il certificato è valido. In questo caso puoi anche mettere `web.host: 127.0.0.1` in `config.yaml` (poi `sudo systemctl restart market-monitor-web`): l'interfaccia non è più raggiungibile in chiaro dalla rete di casa, solo tramite `tailscale serve`. La password resta comunque richiesta se è impostata in `.env`. Per togliere la pubblicazione: `sudo tailscale serve reset`.
+
+### Se non si collega
+
+Controlla in quest'ordine, sul Pi:
+
+1. Il servizio è attivo?
+   ```bash
+   systemctl status market-monitor-web --no-pager
+   ```
+   Se non è `active (running)`, il motivo è nelle ultime righe (oppure `journalctl -u market-monitor-web -n 20 --no-pager`). Con `status=78/CONFIG` manca la password o è troppo corta: correggi `.env` e lancia `sudo systemctl restart market-monitor-web` (in questo caso il servizio non riparte da solo). Anche `check-config` dice se l'interfaccia partirebbe.
+2. Su quale indirizzo ascolta?
+   ```bash
+   sudo ss -ltnp | grep 8080
+   ```
+   `0.0.0.0:8080` va bene; `127.0.0.1:8080` vuol dire `web.host: 127.0.0.1` (raggiungibile solo dal Pi o con `tailscale serve`).
+3. Risponde sull'indirizzo Tailscale?
+   ```bash
+   curl -s -o /dev/null -w "%{http_code}\n" http://$(tailscale ip -4):8080/
+   ```
+   `401` va bene (è la richiesta di password).
+4. Firewall: se `sudo ufw status` dice `active`, apri la porta solo per Tailscale:
+   ```bash
+   sudo ufw allow in on tailscale0 to any port 8080 proto tcp
+   ```
+5. Telefono: app Tailscale connessa e Pi online (`tailscale status` sul Pi). Se hai modificato le regole di accesso (ACL) nel pannello, devono permettere telefono → Pi.
+6. La richiesta arriva? Lascia aperto `journalctl -u market-monitor-web -f` e riprova dal telefono: se compare una riga `web: 100.x.x.x "GET / ..."` la rete funziona.
+
+## 7. Risorse
 
 Circa 20-25 MB di RAM, CPU a zero quando nessuno usa la pagina. Il servizio ha `MemoryMax=100M` come rete di sicurezza.
 
-## 7. Problemi comuni
+## 8. Problemi comuni
 
-- **`WEB_PASSWORD mancante`** all'avvio: aggiungila a `.env` o usa `web.host: 127.0.0.1`.
+- **Il servizio non parte, `status=78/CONFIG`** (oppure `WEB_PASSWORD mancante` / `troppo corta` nel log): aggiungi a `.env` una riga `WEB_PASSWORD=...` di almeno 8 caratteri (o usa `web.host: 127.0.0.1`), poi `sudo systemctl restart market-monitor-web`. Il servizio non riprova da solo finché non lo riavvii.
 - **`Impossibile aprire 0.0.0.0:8080`**: la porta è già usata da un altro programma. Cambia `web.port`.
-- **La pagina non si apre dal telefono**: controlla di essere sulla stessa rete e l'indirizzo con `hostname -I`; verifica `systemctl status market-monitor-web`.
+- **La pagina non si apre dal telefono**: a casa, stessa rete e indirizzo da `hostname -I`; da fuori, vedi la sezione 6 ("Se non si collega").
 - **"la configurazione attuale non è valida"** in alto: un file modificato a mano ha un errore. Il monitor continua con l'ultima versione valida; correggi dall'interfaccia (o a mano) e salva.
 - **Ripristinare la versione precedente** di un file: `cp config/watchlist.yaml.bak config/watchlist.yaml`.
