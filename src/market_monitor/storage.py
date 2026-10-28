@@ -201,6 +201,13 @@ class Storage:
         )
         return [SentAlert(*row) for row in rows]
 
+    def recent_sent_alerts(self, limit: int) -> list[SentAlert]:
+        """The last ``limit`` sent alerts, newest first."""
+        rows = self.conn.execute(
+            "SELECT ts, symbol, rule, detail FROM sent_alerts ORDER BY ts DESC, rowid DESC LIMIT ?", (limit,)
+        )
+        return [SentAlert(*row) for row in rows]
+
     def log_sent_message(self, ts: int) -> None:
         self.conn.execute("INSERT INTO sent_messages (ts) VALUES (?)", (ts,))
 

@@ -107,3 +107,10 @@ def test_maybe_prune_once_per_day(storage):
     storage.save_quote(q(1, 1.0))
     assert storage.maybe_prune("2026-10-28", 40 * day, 30) is None
     assert storage.maybe_prune("2026-10-29", 41 * day, 30) == 1
+
+
+def test_recent_sent_alerts_newest_first(storage):
+    for ts in (10, 30, 20):
+        storage.log_sent_alert(SentAlert(ts, "ENI.MI", "day_move", str(ts)))
+    assert [a.ts for a in storage.recent_sent_alerts(2)] == [30, 20]
+    assert storage.recent_sent_alerts(0) == []
