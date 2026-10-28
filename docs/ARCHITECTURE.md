@@ -12,6 +12,8 @@
 | Notifiche | Telegram Bot API con il token di picoclaw, solo `sendMessage` | Il canale esiste già; niente `getUpdates` per non confliggere con il gateway |
 | Config | Tre YAML ricaricati a caldo + `.env` per i segreti | Watchlist e soglie modificabili senza riavvio |
 | Fuso orario | `zoneinfo` (standard library) | Disponibile in Python 3.11, nessuna dipendenza extra (`pytz` non serve) |
+| Interfaccia web (M10) | Processo separato con `http.server` della standard library, pagina HTML + JavaScript senza build | Nessuna dipendenza nuova; se l'interfaccia ha problemi il monitor continua; comunica col monitor solo tramite YAML (ricarica a caldo), database in lettura e file di stato |
+| Container | Nessun Docker (valutato in M10 e scartato) | Su Pi 3B il demone costa 60-80 MB di RAM; systemd basta |
 
 ## Flusso di un ciclo
 
