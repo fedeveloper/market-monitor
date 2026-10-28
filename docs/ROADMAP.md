@@ -72,7 +72,7 @@ La v1 (senza agente AI) comprende le milestone M0-M8. Le evolutive (M9 in poi) p
 - Taratura delle soglie in `alerts.yaml` dopo qualche giorno di uso reale.
 - Fatto: file `.service` adattato (`check-config` prima dell'avvio, `MemoryMax`, `TimeoutStopSec`), guida completa in `docs/DEPLOY.md`, prova di un ciclo reale dallo sviluppo (1,3 s, RSS 35 MB). **Da fare sul Pi**: tutta la sezione 6 di `docs/DEPLOY.md` (misure, resilienza, taratura). Quando la v1 gira stabile, segna `[x]`.
 
-## Evolutiva 1 — M9: integrazione con picoclaw tramite file di stato `[ ]`
+## Evolutiva 1 — M9: integrazione con picoclaw tramite file di stato `[x]`
 
 Da iniziare solo dopo M8, con la v1 stabile sul Raspberry e conferma dell'utente. Obiettivo: far leggere a picoclaw (agente AI) lo stato del servizio, così può rispondere a domande tipo "come va Eni oggi?" o commentare gli alert. Il servizio resta indipendente: picoclaw legge, non scrive e non controlla nulla. Se picoclaw è spento, non cambia niente.
 
@@ -83,6 +83,7 @@ Da iniziare solo dopo M8, con la v1 stabile sul Raspberry e conferma dell'utente
 - Lato picoclaw, da verificare nella sua documentazione come l'agente legge i file. In base alla documentazione consultata il suo workspace predefinito è `~/.picoclaw/workspace` e di default lavora in sandbox: il file potrebbe dover stare lì o essere collegato con un link simbolico. Documentare la procedura in `docs/PICOCLAW.md`, con le istruzioni da dare all'agente ed esempi di domande.
 - CLI: `python -m market_monitor status --print` stampa il file di stato (utile per il debug).
 - Test: schema e `schema_version`, scrittura atomica (nessun file parziale anche con un errore a metà), assenza di segreti, comportamento con fallimenti parziali dei provider.
+- Note: avviata su richiesta dell'utente con M8 ancora da collaudare sul Pi. Lato picoclaw verificati workspace, `restrict_to_workspace` e `tools.allow_read_paths` nel suo `config.example.json`; da verificare sul Pi il formato esatto di `allow_read_paths` e la cartella delle skill (vedi `docs/PICOCLAW.md`).
 
 ## Idee future (dopo M9)
 

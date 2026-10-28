@@ -65,4 +65,4 @@ Le modifiche a watchlist e alert vengono lette al ciclo successivo, senza riavvi
 
 - I dati gratuiti di Borsa Italiana e USA via Yahoo sono spesso ritardati (circa 15 minuti) e l'endpoint non è ufficiale: può cambiare. Il provider è isolato per poterlo sostituire.
 - Se non arriva più il riepilogo giornaliero, il servizio è fermo: controlla `systemctl status market-monitor`.
-- Prima evolutiva prevista dopo la v1: un file di stato che l'agente di picoclaw può leggere (M9 in `docs/ROADMAP.md`).
+- Integrazione con picoclaw (M9): un file di stato che l'agente di picoclaw può leggere, disattivato di default. Guida in `docs/PICOCLAW.md`.

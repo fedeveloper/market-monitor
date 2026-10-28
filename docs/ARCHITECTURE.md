@@ -127,7 +127,7 @@ Fallback possibili per azioni/ETF se Yahoo smette di funzionare: Stooq (CSV, spe
 - Il processo non deve mai uscire per un'eccezione nel ciclo: log dello stack e si passa al ciclo successivo.
 - Se il servizio è fermo, non può avvisare: il segnale è l'assenza del riepilogo giornaliero.
 
-## Evolutiva 1: integrazione con picoclaw (M9, dopo la v1)
+## Evolutiva 1: integrazione con picoclaw (M9)
 
 In v1 picoclaw è solo il proprietario del bot Telegram condiviso: il servizio non chiama la sua CLI e non legge i suoi file. La prima evolutiva, da iniziare con la v1 stabile e dopo conferma dell'utente (dettagli in `ROADMAP.md`, M9), è questa:
 
@@ -139,28 +139,7 @@ market-monitor --(scrive a fine ciclo)--> status.json --(legge)--> agente picocl
 - Scrittura atomica, `schema_version`, nessun segreto, percorso configurabile (anche tmpfs).
 - Da verificare: come l'agente di picoclaw accede ai file (sandbox, workspace predefinito `~/.picoclaw/workspace`).
 
-Struttura indicativa del file:
-
-```json
-{
-  "schema_version": 1,
-  "generated_at": "2026-10-26T14:30:02+01:00",
-  "interval_minutes": 15,
-  "assets": [
-    {"symbol": "ENI.MI", "name": "Eni", "class": "stock", "price": 14.52, "currency": "EUR",
-     "quote_time": "2026-10-26T14:15:00+01:00", "change_day_pct": 3.1, "market_open": true}
-  ],
-  "recent_alerts": [
-    {"ts": "2026-10-26T14:30:00+01:00", "symbol": "ENI.MI", "rule": "day_move",
-     "detail": "+3,1% oggi (gradino 3%)"}
-  ],
-  "providers": {
-    "yahoo": {"ok": true, "consecutive_failures": 0},
-    "binance": {"ok": true, "consecutive_failures": 0}
-  },
-  "last_digest": "2026-10-25T18:00:00+01:00"
-}
-```
+Implementata in M9: guida completa e formato reale del file in `docs/PICOCLAW.md`. Il file si attiva con `status_file.enabled: true` in `config.yaml` e viene scritto dopo il commit di ogni ciclo (mai in `--dry-run`); un errore di scrittura viene loggato e non ferma il ciclo. Lato picoclaw (verificato nel suo `config.example.json`): workspace `~/.picoclaw/workspace`, `restrict_to_workspace: true` di default, accesso extra con `tools.allow_read_paths`.
 
 ## Evoluzioni possibili (dopo M9)
 
