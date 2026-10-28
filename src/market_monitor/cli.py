@@ -4,18 +4,23 @@ from __future__ import annotations
 
 import argparse
 import logging
+import time
 from collections import Counter
+from datetime import datetime
 from pathlib import Path
 
 from market_monitor import __version__
 from market_monitor.config import (
     Asset,
+    Config,
     ConfigError,
     check_secrets,
     load_config,
     load_secrets,
 )
+from market_monitor.formatting import format_pct, format_price
 from market_monitor.logging_setup import PLAIN_FORMAT, register_secret, setup_logging
+from market_monitor.providers import ProviderError, build_providers
 
 log = logging.getLogger("market_monitor")
 
@@ -96,6 +101,49 @@ def cmd_check_config(args: argparse.Namespace) -> int:
     return 0
 
 
+def _load_or_report(config_dir: Path) -> Config | None:
+    try:
+        config = load_config(config_dir)
+    except ConfigError as exc:
+        log.error("Configurazione NON valida (%s): lancia check-config per i dettagli.", config_dir)
+        for error in exc.errors:
+            log.error("  - %s", error)
+        return None
+    return config
+
+
+def cmd_check_symbols(args: argparse.Namespace, session_factory=None) -> int:
+    config = _load_or_report(Path(args.config_dir))
+    if config is None:
+        return 1
+    providers = build_providers(config.app, **({"session_factory": session_factory} if session_factory else {}))
+    tz = config.app.timezone
+    now = time.time()
+    failures = 0
+    assets = config.enabled_assets
+    for asset in assets:
+        provider = providers.get(asset.provider)
+        if provider is None:
+            log.error("  ERRORE %-9s provider %r non implementato", asset.symbol, asset.provider)
+            failures += 1
+            continue
+        try:
+            quote = provider.fetch(asset)
+        except ProviderError as exc:
+            log.error("  ERRORE %-9s %s", asset.symbol, exc)
+            failures += 1
+            continue
+        when = datetime.fromtimestamp(quote.ts, tz).strftime("%d/%m %H:%M")
+        delay = max(0, round((now - quote.ts) / 60))
+        change = format_pct(quote.change_pct) if quote.change_pct is not None else "n.d."
+        log.info(
+            "  OK     %-9s %-24s %14s  %7s  dato delle %s (%d min fa)",
+            asset.symbol, asset.name[:24], format_price(quote.price, quote.currency), change, when, delay,
+        )
+    log.info("Simboli verificati: %d, falliti: %d", len(assets), failures)
+    return 1 if failures else 0
+
+
 def build_parser() -> argparse.ArgumentParser:
     parser = argparse.ArgumentParser(prog="market_monitor", description="Market Monitor")
     parser.add_argument("--version", action="version", version=f"%(prog)s {__version__}")
@@ -104,6 +152,8 @@ def build_parser() -> argparse.ArgumentParser:
     sub = parser.add_subparsers(dest="command", required=True, metavar="COMMAND")
     check = sub.add_parser("check-config", help="valida config, watchlist e alert")
     check.set_defaults(func=cmd_check_config)
+    symbols = sub.add_parser("check-symbols", help="prova ogni simbolo con il suo provider (usa la rete)")
+    symbols.set_defaults(func=cmd_check_symbols)
     return parser
 
 

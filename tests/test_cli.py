@@ -74,3 +74,31 @@ def test_check_config_invalid(config_dir, capsys):
 def test_check_config_invalid_token_format(config_dir, capsys):
     assert run_check(config_dir, "TELEGRAM_BOT_TOKEN=wrong\nTELEGRAM_CHAT_ID=42\n") == 1
     assert "TELEGRAM_BOT_TOKEN in formato non valido" in capsys.readouterr().out
+
+
+def test_check_symbols_reports_ok_and_errors(config_dir, capsys):
+    from conftest import FakeResponse, FakeSession, fixture_json
+    from market_monitor.cli import build_parser, cmd_check_symbols
+
+    data = config_dir.load("watchlist")
+    data["assets"] = [data["assets"][0], data["assets"][1], data["assets"][-1]]  # ENI, ENEL, BTC
+    config_dir.save("watchlist", data)
+    sessions = {
+        # One session per provider, in config order (yahoo, binance).
+        "yahoo": FakeSession(
+            FakeResponse(200, fixture_json("yahoo_chart_ENI.MI.json")),
+            FakeResponse(404, fixture_json("yahoo_chart_not_found.json")),
+        ),
+        "binance": FakeSession(FakeResponse(200, fixture_json("binance_ticker_24hr_BTCEUR.json"))),
+    }
+    order = iter(["yahoo", "binance"])
+    args = build_parser().parse_args(["--config-dir", str(config_dir.path), "check-symbols"])
+    from market_monitor.logging_setup import PLAIN_FORMAT, setup_logging
+
+    setup_logging(fmt=PLAIN_FORMAT)
+    assert cmd_check_symbols(args, session_factory=lambda: sessions[next(order)]) == 1
+    out = capsys.readouterr().out
+    assert "OK     ENI.MI" in out and "14,52 €" in out and "+3,1%" in out
+    assert "ERRORE ENEL.MI" in out and "symbol may be delisted" in out
+    assert "OK     BTCEUR" in out
+    assert "Simboli verificati: 3, falliti: 1" in out
