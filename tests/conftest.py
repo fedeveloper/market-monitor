@@ -75,3 +75,32 @@ class FakeSession:
 
     def post(self, url, **kwargs):
         return self._next("POST", url, **kwargs)
+
+
+class FakeProvider:
+    """Returns quotes from a dict {symbol: Quote | Exception | callable(asset)}."""
+
+    def __init__(self, name, quotes):
+        self.name = name
+        self.quotes = quotes
+        self.calls = []
+
+    def fetch(self, asset):
+        self.calls.append(asset.symbol)
+        item = self.quotes[asset.symbol]
+        if callable(item) and not isinstance(item, Exception):
+            item = item(asset)
+        if isinstance(item, Exception):
+            raise item
+        return item
+
+
+class Clock:
+    def __init__(self, ts):
+        self.ts = float(ts)
+
+    def __call__(self):
+        return self.ts
+
+    def advance(self, seconds):
+        self.ts += seconds

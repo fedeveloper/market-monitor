@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import argparse
 import logging
+import signal
 import time
 from collections import Counter
 from datetime import datetime
@@ -14,14 +15,16 @@ from market_monitor.config import (
     Asset,
     Config,
     ConfigError,
+    ConfigManager,
     check_secrets,
     load_config,
     load_secrets,
 )
 from market_monitor.formatting import escape, format_pct, format_price
 from market_monitor.logging_setup import PLAIN_FORMAT, register_secret, setup_logging
-from market_monitor.notifier import TelegramNotifier
+from market_monitor.notifier import DryRunNotifier, Notifier, TelegramNotifier
 from market_monitor.providers import ProviderError, build_providers
+from market_monitor.service import Service
 
 log = logging.getLogger("market_monitor")
 
@@ -177,6 +180,38 @@ def cmd_test_telegram(args: argparse.Namespace, session=None) -> int:
     return 1
 
 
+def cmd_run(args: argparse.Namespace) -> int:
+    manager = ConfigManager(Path(args.config_dir))
+    try:
+        manager.load()
+    except ConfigError as exc:
+        log.error("Configurazione NON valida (%s): lancia check-config per i dettagli.", args.config_dir)
+        for error in exc.errors:
+            log.error("  - %s", error)
+        return 1
+    for warning in manager.config.warnings:
+        log.warning("%s", warning)
+    notifier: Notifier | None
+    if args.dry_run:
+        notifier = DryRunNotifier()
+    else:
+        notifier = make_telegram_notifier(args, manager.config)
+        if notifier is None:
+            return 1
+    service = Service(manager, notifier, dry_run=args.dry_run)
+    try:
+        if args.once:
+            return 0 if service.run_cycle_safely() is not None else 1
+        signal.signal(signal.SIGTERM, service.stop)
+        try:
+            service.run_forever()
+        except KeyboardInterrupt:
+            log.info("interrupted")
+        return 0
+    finally:
+        service.close()
+
+
 def build_parser() -> argparse.ArgumentParser:
     parser = argparse.ArgumentParser(prog="market_monitor", description="Market Monitor")
     parser.add_argument("--version", action="version", version=f"%(prog)s {__version__}")
@@ -189,6 +224,10 @@ def build_parser() -> argparse.ArgumentParser:
     symbols.set_defaults(func=cmd_check_symbols)
     telegram = sub.add_parser("test-telegram", help="invia un messaggio di prova su Telegram")
     telegram.set_defaults(func=cmd_test_telegram)
+    run = sub.add_parser("run", help="avvia il servizio (loop continuo)")
+    run.add_argument("--once", action="store_true", help="un solo ciclo, poi esce")
+    run.add_argument("--dry-run", action="store_true", help="mostra i messaggi invece di inviarli, non scrive nel database")
+    run.set_defaults(func=cmd_run)
     return parser
 
 
