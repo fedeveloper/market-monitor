@@ -1,4 +1,4 @@
-"""Telegram notifications via Bot API ``sendMessage`` (never getUpdates: picoclaw polls the same bot)."""
+"""Telegram notifications via Bot API ``sendMessage`` only (never getUpdates: another program may poll the same bot)."""
 
 from __future__ import annotations
 

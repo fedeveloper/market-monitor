@@ -1,4 +1,4 @@
-"""M9: status file read by picoclaw (one direction: the service writes, picoclaw reads).
+"""M9: JSON status file for other programs (one direction: the service writes, readers only read).
 
 The file is rewritten atomically at the end of each cycle (temporary file in the
 same directory + os.replace), so a reader never sees a half-written file. It

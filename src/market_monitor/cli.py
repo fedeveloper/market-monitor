@@ -336,7 +336,7 @@ def build_parser() -> argparse.ArgumentParser:
     digest.add_argument("--now", action="store_true", required=True, help="genera e invia subito il riepilogo")
     digest.add_argument("--dry-run", action="store_true", help="mostra il riepilogo invece di inviarlo")
     digest.set_defaults(func=cmd_digest)
-    status = sub.add_parser("status", help="file di stato per picoclaw (M9)")
+    status = sub.add_parser("status", help="file di stato JSON (M9)")
     status.add_argument("--print", action="store_true", required=True, help="stampa il file di stato")
     status.set_defaults(func=cmd_status)
     web = sub.add_parser("web", help="interfaccia web di configurazione (M10)")

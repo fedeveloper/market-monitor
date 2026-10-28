@@ -98,7 +98,7 @@ class LoggingConfig:
 
 @dataclass(frozen=True)
 class StatusFileConfig:
-    """M9: status file for picoclaw. Off by default."""
+    """M9: JSON status file for other programs. Off by default."""
 
     enabled: bool = False
     path: Path | None = None
