@@ -8,7 +8,7 @@ Servizio leggero per Raspberry Pi che monitora azioni, ETF e crypto con dati gra
 - Notifiche: Telegram Bot API, con filtri antispam (cooldown, quiet hours, batch)
 - Nessun consiglio di investimento: solo dati e soglie superate
 
-> Stato: v1 (milestone M0-M7) completa, collaudo sul Raspberry (M8) da fare. Avanzamento in `docs/ROADMAP.md`, contesto per Claude Code in `CLAUDE.md`. Guida completa di installazione e collaudo: `docs/DEPLOY.md`.
+> Stato: v1 (milestone M0-M8) completa e collaudata sul Raspberry; integrazione con picoclaw (M9) disponibile. Avanzamento in `docs/ROADMAP.md`, contesto per Claude Code in `CLAUDE.md`. Guida completa di installazione e collaudo: `docs/DEPLOY.md`.
 
 ## Requisiti
 
