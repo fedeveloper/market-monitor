@@ -62,6 +62,8 @@ Il servizio riporta dati e soglie superate. Non produce raccomandazioni.
 
 Gli alert soppressi (quiet hours, limite orario) **non** aggiornano lo stato della regola: se la condizione è ancora vera quando la soppressione termina, l'alert parte allora.
 
+Oltre il limite per messaggio partono prima gli urgenti, poi i `day_move`, poi gli altri in ordine di variazione; quelli in più sono indicati come "+N altri alert, al prossimo ciclo" e arrivano al ciclo successivo. Il limite orario vale anche per gli urgenti.
+
 ## Messaggi
 
 Un messaggio per ciclo, in italiano, numeri con virgola decimale e punto per le migliaia. Esempio:
