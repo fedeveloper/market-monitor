@@ -1,0 +1,30 @@
+<!doctype html>
+<html lang="it">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Market Monitor</title>
+  <link rel="stylesheet" href="/app.css">
+  <script src="/app.js" defer></script>
+</head>
+<body>
+  <header>
+    <h1>Market Monitor</h1>
+    <nav id="tabs">
+      <button data-tab="stato" class="active">Stato</button>
+      <button data-tab="watchlist">Watchlist</button>
+      <button data-tab="alerts">Alert e antispam</button>
+      <button data-tab="config">Generale</button>
+    </nav>
+  </header>
+  <main>
+    <div id="validation"></div>
+    <section id="tab-stato"></section>
+    <section id="tab-watchlist" hidden></section>
+    <section id="tab-alerts" hidden></section>
+    <section id="tab-config" hidden></section>
+  </main>
+  <div id="toast" role="status" aria-live="polite"></div>
+  <footer>Le modifiche salvate valgono dal ciclo successivo del monitor, senza riavvio. Il servizio riporta dati e soglie, non dà consigli di investimento.</footer>
+</body>
+</html>
