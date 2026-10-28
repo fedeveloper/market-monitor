@@ -364,3 +364,11 @@ def test_invalid_secret_format_without_leaking_value():
     errors, _ = check_secrets(Secrets(telegram_bot_token="not-a-token-xyz", telegram_chat_id="chat-qwerty"))
     assert len(errors) == 2
     assert not any("not-a-token-xyz" in e or "chat-qwerty" in e for e in errors)
+
+
+def test_unimplemented_provider_is_a_warning(config_dir):
+    app = config_dir.load("config")
+    app["providers"]["coingecko"] = {"base_url": "https://api.coingecko.com", "timeout_seconds": 10, "retries": 1}
+    config_dir.save("config", app)
+    config = load_config(config_dir.path)
+    assert config.warnings == ("config.yaml: providers.coingecko: provider non implementato, verrà ignorato",)

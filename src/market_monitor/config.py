@@ -35,6 +35,8 @@ DAY_REFERENCES = ("prev_close", "rolling_24h")
 WEEKDAYS = ("mon", "tue", "wed", "thu", "fri", "sat", "sun")
 LOG_LEVELS = ("DEBUG", "INFO", "WARNING", "ERROR", "CRITICAL")
 TELEGRAM_MAX_CHARS = 4096
+# Provider names with an implementation in market_monitor.providers.
+IMPLEMENTED_PROVIDERS = ("yahoo", "binance")
 
 
 class ConfigError(Exception):
@@ -491,6 +493,8 @@ def parse_app_config(data: Any, base_dir: Path, errors: list[str], warnings: lis
             provider = _parse_provider(ctx, str(name), raw, _join("providers", str(name)))
             if provider:
                 providers[str(name)] = provider
+                if provider.name not in IMPLEMENTED_PROVIDERS:
+                    ctx.warn(_join("providers", provider.name), "provider non implementato, verrà ignorato")
 
     telegram = None
     tg = _mapping(ctx, data.get("telegram"), "telegram")
