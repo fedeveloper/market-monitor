@@ -4,7 +4,7 @@ Stato: `[ ]` da fare · `[~]` in corso · `[x]` fatto. A fine milestone aggiorna
 
 Regola generale: `pytest` verde (offline) prima di ogni commit; sviluppo e test in un venv Python 3.11.
 
-La v1 (senza agente AI) comprende le milestone M0-M8. Le evolutive (M9 in poi) partono solo quando la v1 gira stabile sul Raspberry e l'utente lo conferma.
+La v1 comprende le milestone M0-M8. Le evolutive (M9 in poi) partono solo quando la v1 gira stabile sul Raspberry e l'utente lo conferma.
 
 ## M0 — Scheletro del progetto `[x]`
 
@@ -72,18 +72,17 @@ La v1 (senza agente AI) comprende le milestone M0-M8. Le evolutive (M9 in poi) p
 - Taratura delle soglie in `alerts.yaml` dopo qualche giorno di uso reale.
 - Fatto: file `.service` adattato (`check-config` prima dell'avvio, `MemoryMax`, `TimeoutStopSec`), guida completa in `docs/DEPLOY.md`, prova di un ciclo reale dallo sviluppo (1,3 s, RSS 35 MB). Collaudo sul Pi (sezione 6 di `docs/DEPLOY.md`) completato e confermato dall'utente: la v1 gira stabile.
 
-## Evolutiva 1 — M9: integrazione con picoclaw tramite file di stato `[x]`
+## Evolutiva 1 — M9: file di stato `[x]`
 
-Da iniziare solo dopo M8, con la v1 stabile sul Raspberry e conferma dell'utente. Obiettivo: far leggere a picoclaw (agente AI) lo stato del servizio, così può rispondere a domande tipo "come va Eni oggi?" o commentare gli alert. Il servizio resta indipendente: picoclaw legge, non scrive e non controlla nulla. Se picoclaw è spento, non cambia niente.
+Il servizio scrive a fine ciclo un file JSON con lo stato corrente, leggibile da altri programmi (script, dashboard, assistenti). Il servizio resta indipendente: chi legge il file non scrive e non controlla nulla.
 
-- Il servizio scrive a fine ciclo un file di stato (`status.json`). Percorso e on/off in `config.yaml`, sezione `status_file`, disattivato di default.
+- Percorso e on/off in `config.yaml`, sezione `status_file`, disattivato di default.
 - Scrittura atomica (file temporaneo + `os.replace`), così il lettore non vede mai un file a metà. Una scrittura per ciclo; il percorso può stare su tmpfs (es. `/dev/shm`) per non scrivere sulla SD: dopo un riavvio il file si rigenera al ciclo successivo.
-- Contenuto, con `schema_version` per le evoluzioni future: data e ora dell'ultimo ciclo e intervallo; per ogni asset nome, simbolo, ultimo prezzo e orario del dato, variazione sul giorno, mercato aperto o chiuso; ultimi alert inviati (numero configurabile); livelli personali raggiunti; salute dei provider; data dell'ultimo riepilogo. Esempio in `docs/ARCHITECTURE.md`.
-- Nessun segreto nel file (mai token né chat id). Quando picoclaw lo legge, il contenuto può arrivare al provider LLM che usa: solo dati di mercato e stato degli alert.
-- Lato picoclaw, da verificare nella sua documentazione come l'agente legge i file. In base alla documentazione consultata il suo workspace predefinito è `~/.picoclaw/workspace` e di default lavora in sandbox: il file potrebbe dover stare lì o essere collegato con un link simbolico. Documentare la procedura in `docs/PICOCLAW.md`, con le istruzioni da dare all'agente ed esempi di domande.
+- Contenuto, con `schema_version` per le evoluzioni future: data e ora dell'ultimo ciclo e intervallo; per ogni asset nome, simbolo, ultimo prezzo e orario del dato, variazione sul giorno, mercato aperto o chiuso; ultimi alert inviati (numero configurabile); livelli personali raggiunti; salute dei provider; data dell'ultimo riepilogo.
+- Nessun segreto nel file (mai token né chat id): solo dati di mercato e stato degli alert.
 - CLI: `python -m market_monitor status --print` stampa il file di stato (utile per il debug).
 - Test: schema e `schema_version`, scrittura atomica (nessun file parziale anche con un errore a metà), assenza di segreti, comportamento con fallimenti parziali dei provider.
-- Note: avviata su richiesta dell'utente; collaudo di M8 confermato in seguito. Lato picoclaw verificati workspace, `restrict_to_workspace` e `tools.allow_read_paths` nel suo `config.example.json`; da verificare sul Pi il formato esatto di `allow_read_paths` e la cartella delle skill (vedi `docs/PICOCLAW.md`).
+- Guida e formato del file: `docs/STATUS_FILE.md`.
 
 ## Evolutiva 2 — M10: interfaccia web di configurazione `[x]`
 
@@ -99,4 +98,4 @@ Decisa con l'utente dopo il collaudo della v1 (la containerizzazione Docker è s
 
 ## Idee future
 
-Volumi anomali, massimi/minimi a 52 settimane, fallback automatico tra provider, comandi di stato da Telegram tramite picoclaw (mai con `getUpdates` dal servizio).
+Volumi anomali, massimi/minimi a 52 settimane, fallback automatico tra provider.

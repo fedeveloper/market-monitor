@@ -58,7 +58,7 @@ logging:
   max_bytes: 1000000
   backup_count: 3
 
-# File di stato leggibile da picoclaw (M9, vedi docs/PICOCLAW.md). Disattivato di default.
+# File di stato JSON leggibile da altri programmi (M9, vedi docs/STATUS_FILE.md). Disattivato di default.
 # Scritto a fine ciclo in modo atomico; nessun segreto. Su tmpfs (/dev/shm) non scrive
 # sulla SD: dopo un riavvio si rigenera al ciclo successivo.
 status_file:

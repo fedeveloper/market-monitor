@@ -7,7 +7,7 @@
 const LABELS = {
   interval_minutes: "Intervallo tra i controlli (minuti)", align_to_clock: "Allinea agli orari tondi",
   timezone: "Fuso orario", markets: "Mercati", providers: "Provider", telegram: "Telegram",
-  storage: "Database", logging: "Log", status_file: "File di stato per picoclaw", web: "Interfaccia web",
+  storage: "Database", logging: "Log", status_file: "File di stato (JSON)", web: "Interfaccia web",
   open: "Apertura (HH:MM)", close: "Chiusura (HH:MM)", days: "Giorni", always_open: "Sempre aperto",
   base_url: "URL", timeout_seconds: "Timeout (secondi)", retries: "Tentativi in più",
   request_delay_ms: "Pausa tra richieste (ms)", user_agent: "User-Agent", parse_mode: "Formato",

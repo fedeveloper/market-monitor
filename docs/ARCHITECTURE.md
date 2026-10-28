@@ -9,7 +9,7 @@
 | Dati azioni/ETF | Endpoint `chart` di Yahoo Finance chiamato con `requests` | `yfinance` porta pandas/numpy, pesanti su Pi 3B |
 | Dati crypto | Binance API pubblica (coppia in EUR, es. `BTCEUR`); CoinGecko come alternativa | Gratuita, senza chiave, campioni a 15 minuti |
 | Storage | SQLite (`sqlite3` stdlib) | Zero manutenzione, poche scritture |
-| Notifiche | Telegram Bot API con il token di picoclaw, solo `sendMessage` | Il canale esiste già; niente `getUpdates` per non confliggere con il gateway |
+| Notifiche | Telegram Bot API, solo `sendMessage` | Niente `getUpdates`: il bot può essere letto anche da un altro programma, e due consumer generano errori 409 |
 | Config | Tre YAML ricaricati a caldo + `.env` per i segreti | Watchlist e soglie modificabili senza riavvio |
 | Fuso orario | `zoneinfo` (standard library) | Disponibile in Python 3.11, nessuna dipendenza extra (`pytz` non serve) |
 | Interfaccia web (M10) | Processo separato con `http.server` della standard library, pagina HTML + JavaScript senza build | Nessuna dipendenza nuova; se l'interfaccia ha problemi il monitor continua; comunica col monitor solo tramite YAML (ricarica a caldo), database in lettura e file di stato |
@@ -129,20 +129,16 @@ Fallback possibili per azioni/ETF se Yahoo smette di funzionare: Stooq (CSV, spe
 - Il processo non deve mai uscire per un'eccezione nel ciclo: log dello stack e si passa al ciclo successivo.
 - Se il servizio è fermo, non può avvisare: il segnale è l'assenza del riepilogo giornaliero.
 
-## Evolutiva 1: integrazione con picoclaw (M9)
-
-In v1 picoclaw è solo il proprietario del bot Telegram condiviso: il servizio non chiama la sua CLI e non legge i suoi file. La prima evolutiva, da iniziare con la v1 stabile e dopo conferma dell'utente (dettagli in `ROADMAP.md`, M9), è questa:
+## Evolutiva 1: file di stato (M9)
 
 ```
-market-monitor --(scrive a fine ciclo)--> status.json --(legge)--> agente picoclaw
+market-monitor --(scrive a fine ciclo)--> status.json --(legge)--> altri programmi
 ```
 
-- Direzione unica: il servizio scrive, picoclaw legge. Il servizio non dipende da picoclaw.
+- Direzione unica: il servizio scrive, gli altri leggono. Il servizio non dipende da chi legge.
 - Scrittura atomica, `schema_version`, nessun segreto, percorso configurabile (anche tmpfs).
-- Da verificare: come l'agente di picoclaw accede ai file (sandbox, workspace predefinito `~/.picoclaw/workspace`).
+- Si attiva con `status_file.enabled: true` in `config.yaml` e viene scritto dopo il commit di ogni ciclo (mai in `--dry-run`); un errore di scrittura viene loggato e non ferma il ciclo. Guida e formato in `docs/STATUS_FILE.md`.
 
-Implementata in M9: guida completa e formato reale del file in `docs/PICOCLAW.md`. Il file si attiva con `status_file.enabled: true` in `config.yaml` e viene scritto dopo il commit di ogni ciclo (mai in `--dry-run`); un errore di scrittura viene loggato e non ferma il ciclo. Lato picoclaw (verificato nel suo `config.example.json`): workspace `~/.picoclaw/workspace`, `restrict_to_workspace: true` di default, accesso extra con `tools.allow_read_paths`.
+## Evoluzioni possibili
 
-## Evoluzioni possibili (dopo M9)
-
-Volumi anomali, massimi/minimi a 52 settimane, correlazione con il portafoglio, fallback automatico tra provider, comandi di stato da Telegram tramite picoclaw (mai con `getUpdates` dal servizio).
+Volumi anomali, massimi/minimi a 52 settimane, correlazione con il portafoglio, fallback automatico tra provider.

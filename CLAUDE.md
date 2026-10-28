@@ -27,12 +27,11 @@ Sul Pi gira Python 3.11.2. Sviluppa e testa in un venv 3.11 (pyenv o simili) per
 
 ## Telegram
 
-- Si usa il bot già configurato per picoclaw: token e chat id stanno in `.env` (`TELEGRAM_BOT_TOKEN`, `TELEGRAM_CHAT_ID`). In chat privata il chat id coincide con lo user id Telegram dell'utente.
+- Bot Telegram: token e chat id stanno in `.env` (`TELEGRAM_BOT_TOKEN`, `TELEGRAM_CHAT_ID`). In chat privata il chat id coincide con lo user id Telegram dell'utente.
 - Invio solo con la Bot API: `POST https://api.telegram.org/bot<TOKEN>/sendMessage` via `requests`.
-- Mai `getUpdates` né webhook: il gateway di picoclaw fa già polling sullo stesso bot e un secondo consumer genera errori 409.
+- Mai `getUpdates` né webhook: il servizio invia soltanto. Il bot può essere usato anche da un altro programma che ne legge gli aggiornamenti, e un secondo consumer genererebbe errori 409.
 - `parse_mode=HTML` con escape dei caratteri speciali. Limite 4096 caratteri per messaggio: spezza i messaggi lunghi.
 - Non loggare mai il token (nemmeno negli URL di errore: maschera `bot<TOKEN>`).
-- In v1 picoclaw è solo il proprietario del bot condiviso: niente chiamate alla sua CLI, niente lettura o scrittura dei suoi file. L'integrazione arriverà con M9 (vedi roadmap).
 
 ## Convenzioni
 
@@ -74,7 +73,7 @@ python -m market_monitor web                 # M10: interfaccia web di configura
 ## Come lavorare
 
 - Procedi per milestone (`docs/ROADMAP.md`), una alla volta, con commit piccoli. A fine milestone aggiorna lo stato nella roadmap.
-- La v1 è M0-M8. Non iniziare M9 (integrazione con picoclaw tramite file di stato) né altre evolutive finché la v1 non gira stabile sul Pi e l'utente non lo conferma.
+- La v1 è M0-M8. Non iniziare evolutive (M9 in poi) finché la v1 non gira stabile sul Pi e l'utente non lo conferma.
 - Le decisioni in `docs/ARCHITECTURE.md` sono state prese con l'utente: se ritieni vada cambiata una, proponilo e chiedi prima di procedere.
 - A ogni PR (nella descrizione e nel riepilogo all'utente) includi due sezioni in italiano: come installare o aggiornare l'applicazione sul Raspberry (comandi pronti da copiare, eventuali nuovi file di config o chiavi da aggiungere, riavvio del servizio) e cosa testare sul Pi in quel rilascio (comandi da lanciare e risultato atteso).
 - Le parti marcate "da verificare" nei docs (formato delle risposte dei provider, orari, latenza dei dati) vanno controllate con una chiamata reale e poi aggiornate nei docs.

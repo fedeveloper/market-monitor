@@ -9,7 +9,7 @@ python3 --version          # atteso Python 3.11.x
 sudo apt install -y git python3-venv tzdata
 ```
 
-Il bot Telegram di picoclaw deve essere già configurato: servono il suo token e il tuo chat id (in chat privata è il tuo user id Telegram).
+Serve un bot Telegram: il suo token (da @BotFather) e il tuo chat id (in chat privata è il tuo user id Telegram).
 
 ## 2. Installazione
 
@@ -45,7 +45,7 @@ Esegui in quest'ordine. Ogni comando esce con codice 0 se va tutto bene (`echo $
 |---|---|---|
 | 1 | `mm check-config` | "Configurazione valida.", 13 asset attivi, "token presente, chat id presente". Il token non compare mai. |
 | 2 | `mm check-symbols` | `OK` per ogni simbolo, con prezzo in formato italiano, variazione e "dato delle HH:MM (N min fa)". |
-| 3 | `mm test-telegram` | Messaggio "Market Monitor · messaggio di prova" nella chat con il bot. picoclaw continua a rispondere normalmente. |
+| 3 | `mm test-telegram` | Messaggio "Market Monitor · messaggio di prova" nella chat con il bot. |
 | 4 | `mm run --once --dry-run` | Nessun errore e la riga `cycle done in X s: N ok, ... RSS NN MB`. Gli eventuali alert compaiono come "[dry-run] messaggio non inviato". Non scrive nel database. |
 | 5 | `mm run --once` | Come sopra, ma salva i dati: viene creato `data/market.db`. Al primo ciclo gli alert già "superati" vengono registrati in silenzio. |
 | 6 | `mm digest --now --dry-run` | Il riepilogo nel terminale, con gli ultimi prezzi salvati. |
@@ -123,7 +123,7 @@ Dopo 48 ore: `ls -lh data/`. È atteso qualche centinaio di kB: con 13 asset e 3
 |---|---|---|
 | Rete assente | Stacca il cavo o spegni il Wi-Fi per 3-4 cicli in orario di Borsa | Nel journal warning di rete per ogni asset e `telegram: network error ..., message dropped`; il servizio non si ferma. Non arriva nessun messaggio, perché anche Telegram è irraggiungibile. Quando la rete torna, il ciclo successivo riprende normalmente. |
 | Un provider giù | In `config.yaml` metti `base_url: https://query1.finance.yahoo.invalid` per `yahoo` e lascia passare 3 cicli in orario di Borsa | Un solo messaggio "il provider yahoo non risponde da 3 cicli consecutivi". Ripristinato l'URL, al ciclo dopo arriva un solo "funziona di nuovo". |
-| Telegram non raggiungibile | Difficile da isolare senza fermare anche picoclaw: basta la prova "rete assente" | Nessun crash. Gli alert non consegnati vengono rivalutati al ciclo dopo. |
+| Telegram non raggiungibile | Basta la prova "rete assente" | Nessun crash. Gli alert non consegnati vengono rivalutati al ciclo dopo. |
 | Provider con 429 | Succede da solo con Yahoo se si fanno molte richieste. Puoi provare abbassando `interval_minutes` a 5 per un'ora | Righe `HTTP 429 ... retry in` nel journal e nessun blocco. Ripristina poi 15. |
 | Configurazione rotta a caldo | Scrivi un errore in `watchlist.yaml` (es. `class: bond`) | Nel journal "configuration changed but is invalid, keeping the previous one", una sola volta. Il servizio continua. Correggi il file e al ciclo dopo compare "configuration reloaded". |
 | Riavvio del Pi | `sudo reboot` a Borsa aperta | Il servizio riparte da solo (`systemctl status`). Nessun alert retroattivo per i gradini già superati prima del riavvio. |
@@ -143,5 +143,5 @@ Le modifiche valgono dal ciclo successivo, senza riavvio.
 - **Il servizio non parte**: `journalctl -u market-monitor -n 50`. Di solito è la configurazione (lancia `mm check-config`) o un percorso sbagliato nel file `.service`.
 - **`TELEGRAM_BOT_TOKEN mancante`**: `.env` non è nella cartella del progetto, oppure manca la variabile.
 - **`HTTP 400 (Bad Request: chat not found)`**: chat id sbagliato, oppure non hai mai scritto al bot.
-- **Errori 409 in picoclaw**: Market Monitor non chiama mai `getUpdates`, quindi la causa è altrove (un'altra istanza di picoclaw?).
+- **Errori 409 su un altro programma che usa lo stesso bot**: Market Monitor non chiama mai `getUpdates`, quindi la causa è altrove (due istanze di quel programma?).
 - **Nessun riepilogo alle 18:00**: il servizio è fermo (`systemctl status market-monitor`), oppure `digest.enabled` è `false`.
