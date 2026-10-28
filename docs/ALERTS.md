@@ -40,6 +40,16 @@ Il servizio riporta dati e soglie superate. Non produce raccomandazioni.
 - Definiti per asset in `config/watchlist.yaml` (`levels.above`, `levels.below`).
 - Scattano una sola volta, quando il prezzo incrocia il livello. Si riarmano solo quando il prezzo si allontana dal livello di `hysteresis_pct` (default 0,5%), per evitare ripetizioni quando oscilla attorno alla soglia.
 
+## Note di implementazione (M5)
+
+- Ogni gradino (per direzione) e ogni livello ha il suo stato e il suo cooldown: chiavi `day_move:up:3`, `day_move:down:5`, `level_above:16`, `fast_move`, `open_gap`. Il cooldown "per coppia asset/regola" vale quindi per lo stesso gradino o livello: un gradino più alto non aspetta il cooldown di quello più basso (altrimenti +3% alle 10:00 bloccherebbe +5% fino a mezzogiorno).
+- Se in un ciclo si superano più gradini insieme, parte un solo alert con il gradino più alto; quelli più bassi vengono segnati come notificati, anche se erano in cooldown.
+- `fast_move` usa come riferimento il campione salvato più recente che sia almeno `window_minutes` più vecchio del dato attuale, con una tolleranza di un intervallo. Per azioni ed ETF il campione deve essere della sessione corrente.
+- Avvio a freddo e riavvio: al primo ciclo dopo l'avvio, i gradini già superati senza uno stato della sessione corrente vengono registrati in silenzio. Fa eccezione il primo ciclo dopo l'apertura: entro due intervalli dall'apertura la valutazione è normale. Per i livelli: se il prezzo è già oltre il livello la prima volta che lo vediamo, non c'è stato un incrocio e non parte nessun alert.
+- `open_gap` usa il prezzo del primo dato con orario successivo all'apertura. Un dato con orario precedente (prezzo di ieri) non conta.
+- Un `day_move` è urgente se la variazione supera `delivery.urgent_pct` della classe: nel messaggio è marcato con ‼️.
+- Lo stato si aggiorna solo se il messaggio parte davvero. Se Telegram non risponde, il messaggio è scartato ma la condizione viene rivalutata al ciclo successivo.
+
 ## Antispam e consegna
 
 | Meccanismo | Comportamento | Default |

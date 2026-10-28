@@ -46,10 +46,11 @@ La v1 (senza agente AI) comprende le milestone M0-M8. Le evolutive (M9 in poi) p
 - Prova reale sul Raspberry: tempi di un ciclo, RSS, CPU.
 - Note: ogni ciclo logga durata e RSS (`cycle done in ...`); la prova reale sul Pi è nella checklist di `docs/DEPLOY.md`. `--dry-run` non scrive nel database. I mercati con orari vengono letti fino a 20 minuti dopo la chiusura, per avere il prezzo finale nonostante il ritardo dei dati.
 
-## M5 — Motore degli alert `[ ]`
+## M5 — Motore degli alert `[x]`
 
 - Funzioni pure per `fast_move`, `day_move`, `open_gap`, livelli, con stato (`alert_state`).
 - Tutti i casi elencati in `docs/ALERTS.md`.
+- Note: il cooldown è implementato già qui, nel motore, perché fa parte della logica dei gradini e di `fast_move`; aggiunto `day_move.rearm_pct` (riarmo deciso con l'utente).
 
 ## M6 — Filtri di consegna `[ ]`
 

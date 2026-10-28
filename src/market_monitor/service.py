@@ -12,12 +12,13 @@ from datetime import datetime
 from market_monitor import markets
 from market_monitor.config import Asset, Config, ConfigManager
 from market_monitor.logging_setup import setup_logging
-from market_monitor.messages import overview
+from market_monitor.alerts import AssetInput, Candidate, EngineSettings, evaluate
+from market_monitor.messages import alert_fragment, alert_message
 from market_monitor.models import Quote
 from market_monitor.notifier import Notifier
 from market_monitor.providers import ProviderError, QuoteProvider, build_providers
 from market_monitor.scheduler import next_run
-from market_monitor.storage import Storage
+from market_monitor.storage import SentAlert, Storage
 
 log = logging.getLogger(__name__)
 
@@ -111,6 +112,7 @@ class Service:
         self._apply_config(manager.config)
         self.storage = storage or Storage(self.config.app.storage.path)
         self.stop_event = threading.Event()
+        self._evaluated: set[str] = set()  # assets evaluated since the process started
 
     @property
     def config(self) -> Config:
@@ -155,14 +157,68 @@ class Service:
         return cycle
 
     def process(self, cycle: CycleResult) -> None:
-        """Evaluate the fetched quotes and notify. M4: an overview of the variations."""
-        rows = [(r.asset, r.quote) for r in cycle.ok]
-        if not rows and not cycle.failed:
-            return
-        text = overview(
-            "Market Monitor", rows, cycle.now_ts, self.config.app.timezone, [r.asset.symbol for r in cycle.failed]
+        """Evaluate the alert rules on the fresh quotes and deliver the alerts."""
+        self.deliver(cycle, self.evaluate_alerts(cycle))
+
+    def engine_settings(self) -> EngineSettings:
+        config = self.config
+        return EngineSettings(
+            cooldown_minutes=config.alerts.delivery.cooldown_minutes,
+            interval_minutes=config.app.interval_minutes,
+            levels=config.alerts.levels,
+            urgent_pct=config.alerts.delivery.urgent_pct,
         )
-        self.send(cycle, text)
+
+    def evaluate_alerts(self, cycle: CycleResult) -> list[Candidate]:
+        config = self.config
+        settings = self.engine_settings()
+        now = int(cycle.now_ts)
+        candidates: list[Candidate] = []
+        for result in cycle.ok:
+            if not result.fresh:
+                continue  # stale data: market closed or unreliable, no alerts
+            asset, quote = result.asset, result.quote
+            session = markets.session_on(config.app.markets[asset.market], cycle.now_ts)
+            if session is None:
+                continue
+            window = asset.rules.fast_move.window_minutes or 0
+            history = self.storage.samples(
+                asset.symbol, quote.ts - (window + 2 * settings.interval_minutes) * 60, quote.ts - 1
+            )
+            first = asset.symbol not in self._evaluated
+            self._evaluated.add(asset.symbol)
+            inp = AssetInput(asset, quote, history, self.storage.rule_states(asset.symbol), session, now, first)
+            evaluation = evaluate(inp, settings)
+            for key, state in evaluation.silent.items():
+                self.storage.set_rule_state(asset.symbol, key, state)
+            candidates.extend(evaluation.candidates)
+        return candidates
+
+    def deliver(self, cycle: CycleResult, candidates: list[Candidate]) -> None:
+        if not candidates:
+            return
+        config = self.config
+        assets = {a.symbol: a for a in config.assets}
+        text = alert_message(
+            "Market Monitor", assets, [c.alert for c in candidates], cycle.now_ts, config.app.timezone
+        )
+        if not self.send(cycle, text):
+            log.warning("%d alerts not delivered: they will be evaluated again next cycle", len(candidates))
+            return
+        self.mark_delivered(cycle, candidates)
+
+    def mark_delivered(self, cycle: CycleResult, candidates: list[Candidate]) -> None:
+        """Store the states of delivered alerts (suppressed ones never get here)."""
+        now = int(cycle.now_ts)
+        assets = {a.symbol: a for a in self.config.assets}
+        for candidate in candidates:
+            alert = candidate.alert
+            for key, state in candidate.states.items():
+                self.storage.set_rule_state(alert.symbol, key, state)
+            detail = alert_fragment(assets[alert.symbol], alert)
+            self.storage.log_sent_alert(SentAlert(now, alert.symbol, alert.rule, detail))
+            log.info("alert sent: %s %s %s", alert.symbol, alert.key, detail)
+        self.storage.log_sent_message(now)
 
     def send(self, cycle: CycleResult, text: str) -> bool:
         ok = self.notifier.send(text)

@@ -50,3 +50,57 @@ def overview(
         lines += ["", f"Non disponibili: {escape(', '.join(failed))}"]
     lines += ["", DELAY_NOTE]
     return "\n".join(lines)
+
+
+def window_label(minutes: int) -> str:
+    if minutes == 60:
+        return "1 ora"
+    if minutes % 60 == 0:
+        return f"{minutes // 60} ore"
+    return f"{minutes} min"
+
+
+def alert_fragment(asset: Asset, alert) -> str:
+    """Plain-text description of one alert (no HTML), e.g. '+3,1% oggi (gradino 3%)'."""
+    if alert.rule == "fast_move":
+        return f"{format_pct(alert.change_pct)} in {window_label(alert.window_minutes)}"
+    if alert.rule == "day_move":
+        return (
+            f"{format_pct(alert.change_pct)} {day_change_label(asset)} "
+            f"(gradino {format_pct(alert.threshold, signed=False)})"
+        )
+    if alert.rule == "open_gap":
+        return f"apertura {format_pct(alert.change_pct)} sulla chiusura precedente"
+    if alert.rule == "level_above":
+        return f"sopra il livello {format_price(alert.threshold, alert.currency)}"
+    if alert.rule == "level_below":
+        return f"sotto il livello {format_price(alert.threshold, alert.currency)}"
+    return alert.rule
+
+
+# Order of the fragments within an asset block.
+_RULE_ORDER = {"fast_move": 0, "day_move": 1, "open_gap": 2, "level_above": 3, "level_below": 4}
+
+
+def alert_message(
+    title: str, assets: dict[str, Asset], alerts: Sequence, now_ts: float, tz: ZoneInfo, more: int = 0
+) -> str:
+    """One message for the cycle, alerts grouped by asset (see docs/ALERTS.md)."""
+    lines = [header(title, now_ts, tz)]
+    by_symbol: dict[str, list] = {}
+    for alert in alerts:
+        by_symbol.setdefault(alert.symbol, []).append(alert)
+    for symbol, group in by_symbol.items():
+        asset = assets[symbol]
+        group = sorted(group, key=lambda a: _RULE_ORDER.get(a.rule, 9))
+        main = next((a for a in group if a.rule == "day_move"), group[0])
+        icon = "▲" if main.direction > 0 else "▼"
+        if any(a.urgent for a in group):
+            icon = "‼️ " + icon
+        price = escape(format_price(main.price, main.currency))
+        lines += ["", f"{icon} {asset_label(asset)}  {price}"]
+        lines.append("   " + " · ".join(escape(alert_fragment(asset, a)) for a in group))
+    if more:
+        lines += ["", f"+{more} altri alert, al prossimo ciclo."]
+    lines += ["", DELAY_NOTE]
+    return "\n".join(lines)

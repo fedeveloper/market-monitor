@@ -372,3 +372,24 @@ def test_unimplemented_provider_is_a_warning(config_dir):
     config_dir.save("config", app)
     config = load_config(config_dir.path)
     assert config.warnings == ("config.yaml: providers.coingecko: provider non implementato, verrà ignorato",)
+
+
+def test_rearm_pct_from_example_and_override(config_dir):
+    data = config_dir.load("watchlist")
+    data["assets"][0]["overrides"] = {"day_move": {"rearm_pct": 0.5}}
+    config_dir.save("watchlist", data)
+    config = load_config(config_dir.path)
+    assert asset(config, "ENI.MI").rules.day_move.rearm_pct == 0.5
+    assert asset(config, "ENEL.MI").rules.day_move.rearm_pct == 1.0
+    assert asset(config, "SWDA.MI").rules.day_move.rearm_pct == 0.6
+    assert asset(config, "BTCEUR").rules.day_move.rearm_pct == 1.5
+
+
+def test_rearm_pct_defaults_for_older_alerts_file(config_dir):
+    alerts = config_dir.load("alerts")
+    for rules in alerts["defaults"].values():
+        rules["day_move"].pop("rearm_pct", None)
+    config_dir.save("alerts", alerts)
+    config = load_config(config_dir.path)
+    assert asset(config, "ENI.MI").rules.day_move.rearm_pct == 1.0
+    assert asset(config, "BTCEUR").rules.day_move.rearm_pct == 1.5
