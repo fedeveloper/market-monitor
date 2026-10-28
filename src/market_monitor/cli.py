@@ -235,6 +235,23 @@ def cmd_digest(args: argparse.Namespace) -> int:
         service.close()
 
 
+def cmd_status(args: argparse.Namespace) -> int:
+    config = _load_or_report(Path(args.config_dir))
+    if config is None:
+        return 1
+    status = config.app.status_file
+    if not status.enabled:
+        log.error("File di stato disattivato: imposta status_file.enabled: true in config.yaml.")
+        return 1
+    try:
+        text = status.path.read_text(encoding="utf-8")
+    except FileNotFoundError:
+        log.error("%s non esiste ancora: viene scritto a fine ciclo dal servizio (run).", status.path)
+        return 1
+    log.info("%s", text.rstrip())
+    return 0
+
+
 def build_parser() -> argparse.ArgumentParser:
     parser = argparse.ArgumentParser(prog="market_monitor", description="Market Monitor")
     parser.add_argument("--version", action="version", version=f"%(prog)s {__version__}")
@@ -255,6 +272,9 @@ def build_parser() -> argparse.ArgumentParser:
     digest.add_argument("--now", action="store_true", required=True, help="genera e invia subito il riepilogo")
     digest.add_argument("--dry-run", action="store_true", help="mostra il riepilogo invece di inviarlo")
     digest.set_defaults(func=cmd_digest)
+    status = sub.add_parser("status", help="file di stato per picoclaw (M9)")
+    status.add_argument("--print", action="store_true", required=True, help="stampa il file di stato")
+    status.set_defaults(func=cmd_status)
     return parser
 
 

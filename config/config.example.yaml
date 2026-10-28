@@ -58,8 +58,11 @@ logging:
   max_bytes: 1000000
   backup_count: 3
 
-# Evolutiva M9 (NON implementata in v1): file di stato leggibile da picoclaw.
-# status_file:
-#   enabled: false
-#   path: data/status.json    # puo' stare su tmpfs, es. /dev/shm/market-monitor-status.json
-#   recent_alerts: 20
+# File di stato leggibile da picoclaw (M9, vedi docs/PICOCLAW.md). Disattivato di default.
+# Scritto a fine ciclo in modo atomico; nessun segreto. Su tmpfs (/dev/shm) non scrive
+# sulla SD: dopo un riavvio si rigenera al ciclo successivo.
+status_file:
+  enabled: false
+  path: /dev/shm/market-monitor/status.json
+  # Numero di alert recenti inclusi nel file.
+  recent_alerts: 20

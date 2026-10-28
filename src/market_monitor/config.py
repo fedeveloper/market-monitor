@@ -97,6 +97,15 @@ class LoggingConfig:
 
 
 @dataclass(frozen=True)
+class StatusFileConfig:
+    """M9: status file for picoclaw. Off by default."""
+
+    enabled: bool = False
+    path: Path | None = None
+    recent_alerts: int = 20
+
+
+@dataclass(frozen=True)
 class AppConfig:
     interval_minutes: int
     align_to_clock: bool
@@ -106,6 +115,7 @@ class AppConfig:
     telegram: TelegramConfig
     storage: StorageConfig
     logging: LoggingConfig
+    status_file: StatusFileConfig = StatusFileConfig()
 
 
 # Rule fields other than ``enabled`` are None only when the rule is disabled.
@@ -466,7 +476,7 @@ def parse_app_config(data: Any, base_dir: Path, errors: list[str], warnings: lis
     n_errors = len(errors)
     sections = (
         "interval_minutes", "align_to_clock", "timezone", "markets", "providers",
-        "telegram", "storage", "logging",
+        "telegram", "storage", "logging", "status_file",
     )
     _unknown_keys(ctx, data, "", sections)
 
@@ -540,9 +550,20 @@ def parse_app_config(data: Any, base_dir: Path, errors: list[str], warnings: lis
                 backup_count=backup_count,
             )
 
+    status_file = StatusFileConfig()
+    sf = _mapping(ctx, data.get("status_file"), "status_file", required=False)
+    if sf is not None:
+        _unknown_keys(ctx, sf, "status_file", ("enabled", "path", "recent_alerts"))
+        enabled = _get(ctx, sf, "enabled", "status_file", _bool, default=False)
+        path = _get(ctx, sf, "path", "status_file", _str, default="data/status.json")
+        recent = _get(ctx, sf, "recent_alerts", "status_file", _int_range(0, 500), default=20)
+        if None not in (enabled, path, recent):
+            status_file = StatusFileConfig(enabled=enabled, path=_resolve(base_dir, path), recent_alerts=recent)
+
     if len(errors) > n_errors:
         return None
     return AppConfig(
+        status_file=status_file,
         interval_minutes=interval,
         align_to_clock=align,
         timezone=tz,
