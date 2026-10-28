@@ -41,17 +41,6 @@ def quote_line(asset: Asset, quote: Quote) -> str:
     return text
 
 
-def overview(
-    title: str, rows: Sequence[tuple[Asset, Quote]], now_ts: float, tz: ZoneInfo, failed: Sequence[str] = ()
-) -> str:
-    lines = [header(title, now_ts, tz), ""]
-    lines += [quote_line(asset, quote) for asset, quote in rows] or ["Nessun dato disponibile."]
-    if failed:
-        lines += ["", f"Non disponibili: {escape(', '.join(failed))}"]
-    lines += ["", DELAY_NOTE]
-    return "\n".join(lines)
-
-
 def window_label(minutes: int) -> str:
     if minutes == 60:
         return "1 ora"
