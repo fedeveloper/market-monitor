@@ -18,8 +18,9 @@ from market_monitor.config import (
     load_config,
     load_secrets,
 )
-from market_monitor.formatting import format_pct, format_price
+from market_monitor.formatting import escape, format_pct, format_price
 from market_monitor.logging_setup import PLAIN_FORMAT, register_secret, setup_logging
+from market_monitor.notifier import TelegramNotifier
 from market_monitor.providers import ProviderError, build_providers
 
 log = logging.getLogger("market_monitor")
@@ -144,6 +145,38 @@ def cmd_check_symbols(args: argparse.Namespace, session_factory=None) -> int:
     return 1 if failures else 0
 
 
+def make_telegram_notifier(args: argparse.Namespace, config: Config, session=None) -> TelegramNotifier | None:
+    """Build the Telegram notifier from .env, or log why it is not possible."""
+    secrets = load_secrets(Path(args.env_file))
+    register_secret(secrets.telegram_bot_token)
+    errors, warnings = check_secrets(secrets)
+    if errors or warnings:
+        for problem in errors + warnings:
+            log.error("%s", problem)
+        return None
+    return TelegramNotifier(secrets.telegram_bot_token, secrets.telegram_chat_id, config.app.telegram, session=session)
+
+
+def cmd_test_telegram(args: argparse.Namespace, session=None) -> int:
+    config = _load_or_report(Path(args.config_dir))
+    if config is None:
+        return 1
+    notifier = make_telegram_notifier(args, config, session=session)
+    if notifier is None:
+        return 1
+    now = datetime.now(config.app.timezone).strftime("%d/%m/%Y %H:%M")
+    text = (
+        "<b>Market Monitor</b> · messaggio di prova\n"
+        f"Inviato il {escape(now)}. Asset in watchlist: {len(config.enabled_assets)}.\n"
+        "Se lo leggi, token e chat id sono corretti."
+    )
+    if notifier.send(text):
+        log.info("Messaggio di prova inviato.")
+        return 0
+    log.error("Invio fallito: controlla token, chat id e connessione (dettagli sopra).")
+    return 1
+
+
 def build_parser() -> argparse.ArgumentParser:
     parser = argparse.ArgumentParser(prog="market_monitor", description="Market Monitor")
     parser.add_argument("--version", action="version", version=f"%(prog)s {__version__}")
@@ -154,6 +187,8 @@ def build_parser() -> argparse.ArgumentParser:
     check.set_defaults(func=cmd_check_config)
     symbols = sub.add_parser("check-symbols", help="prova ogni simbolo con il suo provider (usa la rete)")
     symbols.set_defaults(func=cmd_check_symbols)
+    telegram = sub.add_parser("test-telegram", help="invia un messaggio di prova su Telegram")
+    telegram.set_defaults(func=cmd_test_telegram)
     return parser
 
 
