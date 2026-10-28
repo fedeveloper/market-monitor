@@ -51,24 +51,59 @@ def quote(symbol, ts, price, prev=None, currency="EUR"):
     return Quote(symbol, int(ts), price, prev_close=prev, currency=currency)
 
 
-def test_cycle_fetches_saves_and_notifies(small_watchlist):
+def test_cycle_fetches_saves_and_alerts(small_watchlist):
     clock = Clock(WED_10)
     quotes = {
-        "ENI.MI": quote("ENI.MI", WED_10 - 900, 14.52, 14.08),
+        # 09:55 data: more than max_delay_minutes after the open, so open_gap is skipped.
+        "ENI.MI": quote("ENI.MI", WED_10 - 300, 14.52, 14.08),
         "ENEL.MI": ProviderError("yahoo ENEL.MI: HTTP 429"),
         "BTCEUR": quote("BTCEUR", WED_10 - 10, 62310.0, 65728.0),
     }
     notifier = DryRunNotifier()
-    service, _ = make_service(small_watchlist, clock, quotes, notifier)
+    service, providers = make_service(small_watchlist, clock, quotes, notifier)
     cycle = service.run_cycle()
     assert [r.asset.symbol for r in cycle.ok] == ["ENI.MI", "BTCEUR"]
     assert [r.asset.symbol for r in cycle.failed] == ["ENEL.MI"]
     assert service.storage.last_quote("ENI.MI").price == 14.52
+    # First cycle after start, mid-session: steps already passed are recorded silently.
+    assert notifier.sent == []
+    assert service.storage.rule_states("ENI.MI")["day_move:up:3"].armed is False
+    assert service.storage.rule_states("BTCEUR")["day_move:down:5"].armed is False
+
+    # Next cycle: Eni reaches +5.2%, Bitcoin unchanged.
+    clock.advance(900)
+    providers["yahoo"].quotes["ENI.MI"] = quote("ENI.MI", WED_10, 14.82, 14.08)
+    providers["yahoo"].quotes["ENEL.MI"] = quote("ENEL.MI", WED_10, 7.0, 7.0)
+    service.run_cycle()
+    assert len(notifier.sent) == 1
     text = notifier.sent[0]
-    assert "<b>Market Monitor</b> · 10:00" in text
-    assert "▲ Eni (ENI.MI)  14,52 €  +3,1% oggi" in text
-    assert "▼ Bitcoin (BTCEUR)  62.310 €  −5,2% in 24 ore" in text
-    assert "Non disponibili: ENEL.MI" in text
+    assert "<b>Market Monitor</b> · 10:15" in text
+    assert "▲ Eni (ENI.MI)  14,82 €" in text
+    assert "+5,3% oggi (gradino 5%)" in text
+    assert "Bitcoin" not in text
+    assert [a.rule for a in service.storage.sent_alerts(0)] == ["day_move"]
+    assert service.storage.sent_message_times(0) == [int(WED_10 + 900)]
+
+
+def test_failed_send_keeps_alert_for_next_cycle(small_watchlist):
+    class FailingNotifier:
+        def __init__(self):
+            self.calls = 0
+
+        def send(self, text):
+            self.calls += 1
+            return False
+
+    quotes = {s: quote(s, WED_10, 1.0, 1.0) for s in ("ENI.MI", "ENEL.MI", "BTCEUR")}
+    notifier = FailingNotifier()
+    service, providers = make_service(small_watchlist, Clock(WED_10), quotes, notifier)
+    service.run_cycle()  # silent initialisation at +0%
+    providers["yahoo"].quotes["ENI.MI"] = quote("ENI.MI", WED_10, 1.04, 1.0)
+    service.clock.advance(900)
+    service.run_cycle()
+    assert notifier.calls == 1
+    assert "day_move:up:3" not in service.storage.rule_states("ENI.MI")
+    assert service.storage.sent_alerts(0) == []
 
 
 def test_closed_market_not_fetched(small_watchlist):
@@ -171,7 +206,7 @@ def test_cli_run_once_dry_run(small_watchlist, monkeypatch, capsys):
     code = main(["--config-dir", str(small_watchlist.path), "--env-file", "/nonexistent", "run", "--once", "--dry-run"])
     assert code == 0
     out = capsys.readouterr().out
-    assert "[dry-run] messaggio non inviato" in out and "Bitcoin (BTCEUR)" in out
+    assert "cycle done" in out
     # The log file of the example config lives next to the config dir.
     assert (small_watchlist.path.parent / "logs" / "market-monitor.log").exists()
 
