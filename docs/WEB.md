@@ -90,7 +90,7 @@ sudo tailscale serve --bg 8080
 tailscale serve status       # mostra l'indirizzo, es. https://raspberrypi.<tuo-tailnet>.ts.net
 ```
 
-Apri quell'indirizzo dal telefono: la connessione è cifrata e il certificato è valido. In questo caso puoi anche mettere `web.host: 127.0.0.1` in `config.yaml` (poi `sudo systemctl restart market-monitor-web`): l'interfaccia non è più raggiungibile in chiaro dalla rete di casa, solo tramite `tailscale serve`. La password resta comunque richiesta se è impostata in `.env`. Per togliere la pubblicazione: `sudo tailscale serve --https=443 off`.
+Apri quell'indirizzo dal telefono: la connessione è cifrata e il certificato è valido. In questo caso puoi anche mettere `web.host: 127.0.0.1` in `config.yaml` (poi `sudo systemctl restart market-monitor-web`): l'interfaccia non è più raggiungibile in chiaro dalla rete di casa, solo tramite `tailscale serve`. La password resta comunque richiesta se è impostata in `.env`. Per togliere la pubblicazione: `sudo tailscale serve reset`.
 
 ### Se non si collega
 
