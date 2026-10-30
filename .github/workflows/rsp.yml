@@ -1,0 +1,47 @@
+# Runs RSP (https://github.com/fedeveloper/rsp) on every change.
+# Advisory only: it never fails the build.
+name: rsp
+
+on:
+  pull_request:
+  push:
+    branches: [main]
+
+permissions: {}
+
+jobs:
+  # Pull requests: one comment on the PR, kept up to date, plus annotations.
+  pr:
+    if: github.event_name == 'pull_request'
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    permissions:
+      contents: read
+      pull-requests: write
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          fetch-depth: 0
+          persist-credentials: false
+      - uses: fedeveloper/rsp@097c6bac23136ecb595f365ca55ef68091f8b7f4 # v0.4.0
+
+  # Direct pushes to main: the same report in the run's summary (Actions tab).
+  push:
+    if: github.event_name == 'push' && github.event.before != '0000000000000000000000000000000000000000'
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    permissions:
+      contents: read
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          fetch-depth: 0
+          persist-credentials: false
+      - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
+        with:
+          node-version: 24
+      - name: rsp check
+        env:
+          BEFORE: ${{ github.event.before }}
+          AFTER: ${{ github.sha }}
+        run: npx -y github:fedeveloper/rsp#v0.4.0 check --base "$BEFORE" --head "$AFTER" >> "$GITHUB_STEP_SUMMARY"
