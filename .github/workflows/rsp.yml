@@ -23,7 +23,9 @@ jobs:
         with:
           fetch-depth: 0
           persist-credentials: false
-      - uses: fedeveloper/rsp@097c6bac23136ecb595f365ca55ef68091f8b7f4 # v0.4.0
+      # `v0` is the major tag, moved to every new rsp release, so this always
+      # runs the latest version (deliberately not pinned by SHA).
+      - uses: fedeveloper/rsp@v0
 
   # Direct pushes to main: the same report in the run's summary (Actions tab).
   push:
@@ -44,4 +46,4 @@ jobs:
         env:
           BEFORE: ${{ github.event.before }}
           AFTER: ${{ github.sha }}
-        run: npx -y github:fedeveloper/rsp#v0.4.0 check --base "$BEFORE" --head "$AFTER" >> "$GITHUB_STEP_SUMMARY"
+        run: npx -y github:fedeveloper/rsp#v0 check --base "$BEFORE" --head "$AFTER" >> "$GITHUB_STEP_SUMMARY"
