@@ -1,5 +1,7 @@
+import os
 import subprocess
 import sys
+from pathlib import Path
 
 import pytest
 
@@ -14,10 +16,14 @@ def test_version(capsys):
 
 
 def test_module_entry_point():
+    # The child process does not inherit pytest's pythonpath setting: run it the
+    # documented way (PYTHONPATH=src), so the test works without `pip install -e .`.
+    src = Path(__file__).resolve().parent.parent / "src"
+    env = {**os.environ, "PYTHONPATH": os.pathsep.join(filter(None, [str(src), os.environ.get("PYTHONPATH")]))}
     result = subprocess.run(
-        [sys.executable, "-m", "market_monitor", "--version"], capture_output=True, text=True
+        [sys.executable, "-m", "market_monitor", "--version"], capture_output=True, text=True, env=env
     )
-    assert result.returncode == 0
+    assert result.returncode == 0, result.stderr
 
 
 FAKE_TOKEN = "123456789:AAH_fake-token-for-tests-0123456789"
