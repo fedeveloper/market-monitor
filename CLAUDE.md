@@ -35,7 +35,7 @@ Sul Pi gira Python 3.11.2. Sviluppa e testa in un venv 3.11 (pyenv o simili) per
 
 ## Convenzioni
 
-- Codice, nomi e commenti in inglese. Messaggi Telegram, README e docs in italiano.
+- Codice, nomi e commenti in inglese. Messaggi Telegram, interfaccia web e docs in italiano. Il `README.md` è in inglese (pagina di presentazione pubblica, deciso con l'utente); il promemoria italiano con i comandi rapidi è `docs/README.it.md`: tienili allineati quando cambiano installazione o comandi.
 - Layout: `src/market_monitor/` (pacchetto), `tests/`, `config/`, `deploy/`, `docs/`. Esecuzione con `PYTHONPATH=src python -m market_monitor ...` oppure aggiungi un `pyproject.toml` minimo per `pip install -e .`.
 - Logica degli alert in funzioni pure (input: storico, quote, regole, stato; output: lista di alert), senza I/O. Provider, storage e notifier dietro interfacce semplici.
 - Un provider che fallisce non blocca gli altri: il ciclo termina sempre, anche con fallimenti parziali. Errori loggati con contesto, mai silenziati.

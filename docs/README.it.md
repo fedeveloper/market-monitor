@@ -1,4 +1,6 @@
-# Market Monitor
+# Market Monitor (italiano)
+
+> Promemoria in italiano per l'installazione sul Raspberry e i comandi di tutti i giorni. README principale in inglese: [../README.md](../README.md). I percorsi qui sotto sono relativi alla cartella del progetto.
 
 Servizio leggero per Raspberry Pi che monitora azioni, ETF e crypto con dati gratuiti e invia alert e riepiloghi su un bot Telegram.
 
